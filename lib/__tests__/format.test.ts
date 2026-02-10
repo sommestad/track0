@@ -3,8 +3,11 @@ import {
   formatIssueConfirmation,
   formatIssueDetail,
   formatIssueList,
+  computeThreadStats,
+  formatThreadStats,
+  formatCharCount,
 } from '../format';
-import { Issue, ThreadMessage } from '../types';
+import { Issue, ThreadMessage, ThreadStats } from '../types';
 
 const baseIssue: Issue = {
   id: 'wi_abc12345',
@@ -16,77 +19,190 @@ const baseIssue: Issue = {
   summary: 'Need rate limiting on the memory API.',
   embedding: null,
   created_at: '2025-01-01T00:00:00Z',
-  updated_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-15T00:00:00Z',
 };
 
-describe('formatIssueConfirmation', () => {
-  it('should format a created issue with labels', () => {
-    const result = formatIssueConfirmation(baseIssue, 'Created');
+describe('formatCharCount', () => {
+  it('should show raw number for < 1000 chars', () => {
+    expect(formatCharCount(800)).toBe('~800 chars');
+  });
 
-    expect(result).toContain('Created wi_abc12345');
-    expect(result).toContain('"Add rate limiting"');
-    expect(result).toContain('TYPE: feature');
-    expect(result).toContain('STATUS: open');
-    expect(result).toContain('PRIORITY: 2');
-    expect(result).toContain('LABELS: backend, api');
-    expect(result).toContain('SUMMARY: Need rate limiting');
+  it('should show one decimal for 1000-9999 chars', () => {
+    expect(formatCharCount(1200)).toBe('~1.2k chars');
+  });
+
+  it('should show rounded k for >= 10000 chars', () => {
+    expect(formatCharCount(12345)).toBe('~12k chars');
+  });
+
+  it('should handle zero', () => {
+    expect(formatCharCount(0)).toBe('~0 chars');
+  });
+});
+
+describe('computeThreadStats', () => {
+  it('should compute stats from messages', () => {
+    const messages: ThreadMessage[] = [
+      {
+        id: 1,
+        issue_id: 'wi_abc12345',
+        timestamp: '2025-01-01T10:00:00Z',
+        role: 'assistant',
+        content: 'Hello',
+      },
+      {
+        id: 2,
+        issue_id: 'wi_abc12345',
+        timestamp: '2025-01-01T11:00:00Z',
+        role: 'user',
+        content: 'World!',
+      },
+    ];
+
+    const stats = computeThreadStats(messages);
+
+    expect(stats.message_count).toBe(2);
+    expect(stats.total_chars).toBe(11);
+  });
+
+  it('should return zeros for empty messages', () => {
+    const stats = computeThreadStats([]);
+
+    expect(stats.message_count).toBe(0);
+    expect(stats.total_chars).toBe(0);
+  });
+});
+
+describe('formatThreadStats', () => {
+  it('should format plural messages', () => {
+    const stats: ThreadStats = { message_count: 3, total_chars: 1200 };
+
+    expect(formatThreadStats(stats)).toBe('[thread: 3 msgs, ~1.2k chars]');
+  });
+
+  it('should format singular message', () => {
+    const stats: ThreadStats = { message_count: 1, total_chars: 500 };
+
+    expect(formatThreadStats(stats)).toBe('[thread: 1 msg, ~500 chars]');
+  });
+
+  it('should add thin context hint when message_count < 2 and total_chars < 200', () => {
+    const stats: ThreadStats = { message_count: 1, total_chars: 80 };
+
+    const result = formatThreadStats(stats);
+
+    expect(result).toContain('context is thin');
+    expect(result).toContain('consider providing more detail');
+  });
+
+  it('should not add thin context hint when message_count >= 2', () => {
+    const stats: ThreadStats = { message_count: 2, total_chars: 100 };
+
+    expect(formatThreadStats(stats)).not.toContain('context is thin');
+  });
+
+  it('should not add thin context hint when total_chars >= 200', () => {
+    const stats: ThreadStats = { message_count: 1, total_chars: 250 };
+
+    expect(formatThreadStats(stats)).not.toContain('context is thin');
+  });
+});
+
+describe('formatIssueConfirmation', () => {
+  const defaultStats: ThreadStats = { message_count: 3, total_chars: 1200 };
+
+  it('should format a created issue compactly', () => {
+    const result = formatIssueConfirmation(baseIssue, 'Created', defaultStats);
+
+    expect(result).toContain('Created wi_abc12345: "Add rate limiting"');
+    expect(result).toContain('P2 feature | open | backend, api');
+    expect(result).toContain('Need rate limiting on the memory API.');
+    expect(result).toContain('[thread: 3 msgs, ~1.2k chars]');
   });
 
   it('should format an updated issue', () => {
-    const result = formatIssueConfirmation(baseIssue, 'Updated');
+    const result = formatIssueConfirmation(baseIssue, 'Updated', defaultStats);
 
     expect(result).toContain('Updated wi_abc12345');
   });
 
   it('should show "none" when labels are empty', () => {
     const issue = { ...baseIssue, labels: [] };
-    const result = formatIssueConfirmation(issue, 'Created');
+    const result = formatIssueConfirmation(issue, 'Created', defaultStats);
 
-    expect(result).toContain('LABELS: none');
+    expect(result).toContain('| none');
   });
 
   it('should show "No summary yet." when summary is empty', () => {
     const issue = { ...baseIssue, summary: '' };
-    const result = formatIssueConfirmation(issue, 'Created');
+    const result = formatIssueConfirmation(issue, 'Created', defaultStats);
 
-    expect(result).toContain('SUMMARY: No summary yet.');
+    expect(result).toContain('No summary yet.');
+  });
+
+  it('should not contain redundant labels like TYPE: or STATUS:', () => {
+    const result = formatIssueConfirmation(baseIssue, 'Created', defaultStats);
+
+    expect(result).not.toContain('TYPE:');
+    expect(result).not.toContain('STATUS:');
+    expect(result).not.toContain('PRIORITY:');
+    expect(result).not.toContain('LABELS:');
+    expect(result).not.toContain('SUMMARY:');
   });
 });
 
 describe('formatIssueDetail', () => {
-  it('should format issue header with labels', () => {
+  it('should format issue header with dates and compact fields', () => {
     const result = formatIssueDetail(baseIssue, []);
 
-    expect(result).toContain('wi_abc12345 | Add rate limiting');
-    expect(result).toContain('STATUS: open');
-    expect(result).toContain('TYPE: feature');
-    expect(result).toContain('PRIORITY: 2');
-    expect(result).toContain('LABELS: backend, api');
+    expect(result).toContain('wi_abc12345: "Add rate limiting"');
+    expect(result).toContain('P2 feature | open | backend, api');
+    expect(result).toContain('Created 2025-01-01 | Updated 2025-01-15');
+    expect(result).toContain('Need rate limiting on the memory API.');
+  });
+
+  it('should not contain redundant labels', () => {
+    const result = formatIssueDetail(baseIssue, []);
+
+    expect(result).not.toContain('STATUS:');
+    expect(result).not.toContain('TYPE:');
+    expect(result).not.toContain('PRIORITY:');
+    expect(result).not.toContain('LABELS:');
+    expect(result).not.toContain('SUMMARY:');
   });
 
   it('should omit thread section when messages are empty', () => {
     const result = formatIssueDetail(baseIssue, []);
 
-    expect(result).not.toContain('THREAD:');
+    expect(result).not.toContain('THREAD');
   });
 
-  it('should include thread when messages are present', () => {
+  it('should include thread with stats when messages are present', () => {
     const messages: ThreadMessage[] = [
       {
         id: 1,
         issue_id: 'wi_abc12345',
         timestamp: '2025-01-01T10:30:00Z',
-        role: 'claude',
+        role: 'assistant',
         content: 'Working on rate limiting now.',
+      },
+      {
+        id: 2,
+        issue_id: 'wi_abc12345',
+        timestamp: '2025-01-15T09:00:00Z',
+        role: 'user',
+        content: 'Proceed with implementation.',
       },
     ];
 
     const result = formatIssueDetail(baseIssue, messages);
 
-    expect(result).toContain('THREAD:');
+    expect(result).toContain('THREAD (2 msgs,');
     expect(result).toContain('2025-01-01 10:30');
-    expect(result).toContain('claude');
+    expect(result).toContain('assistant');
     expect(result).toContain('Working on rate limiting now.');
+    expect(result).toContain('2025-01-15 09:00');
+    expect(result).toContain('Proceed with implementation.');
   });
 });
 

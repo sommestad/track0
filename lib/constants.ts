@@ -15,8 +15,8 @@ export const STATUS_BORDERS: Record<Issue['status'], string> = {
 };
 
 export const ROLE_COLORS: Record<ThreadMessage['role'], string> = {
-  claude: 'text-[var(--blue)]',
-  human: 'text-[var(--green)]',
+  assistant: 'text-[var(--blue)]',
+  user: 'text-[var(--green)]',
   system: 'text-muted-foreground',
 };
 

@@ -17,8 +17,13 @@ export interface ThreadMessage {
   id: number;
   issue_id: string;
   timestamp: string;
-  role: 'human' | 'claude' | 'system';
+  role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+export interface ThreadStats {
+  message_count: number;
+  total_chars: number;
 }
 
 export const IssueFieldsSchema = z.object({

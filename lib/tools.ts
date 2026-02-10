@@ -9,9 +9,15 @@ import {
   getThreadMessages,
   getNonDoneIssues,
   vectorSearch,
+  getThreadStats,
+  getThreadStatsBatch,
 } from './db';
 import { extractFields, generateEmbedding, answerQuestion } from './ai';
-import { formatIssueConfirmation, formatIssueDetail } from './format';
+import {
+  formatIssueConfirmation,
+  formatIssueDetail,
+  computeThreadStats,
+} from './format';
 import { Issue } from './types';
 
 const THREAD_CONTEXT_LIMIT = 20;
@@ -34,7 +40,7 @@ export async function handleTell(
       return `Issue not found: ${issue_id}`;
     }
 
-    await addThreadMessage(issue_id, 'claude', message);
+    await addThreadMessage(issue_id, 'assistant', message);
 
     const messages = await getThreadMessages(issue_id, THREAD_CONTEXT_LIMIT);
 
@@ -54,7 +60,12 @@ export async function handleTell(
       return `Issue not found: ${issue_id}`;
     }
 
-    return formatIssueConfirmation(updated, is_new ? 'Created' : 'Updated');
+    const stats = await getThreadStats(issue_id);
+    return formatIssueConfirmation(
+      updated,
+      is_new ? 'Created' : 'Updated',
+      stats,
+    );
   } catch (error) {
     console.error('handleTell failed:', error);
     return `Error processing message: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -87,8 +98,13 @@ export async function handleAsk(question: string): Promise<string> {
       return 'No issues found.';
     }
 
-    const answer = await answerQuestion(question, all_issues);
-    return answer;
+    const stats_map = await getThreadStatsBatch(
+      all_issues.map((i) => i.id),
+    );
+    const answer = await answerQuestion(question, all_issues, stats_map);
+    const matched = vector_results.length;
+    const total_active = non_done.length;
+    return `[${matched} issues matched, ${total_active} total active]\n${answer}`;
   } catch (error) {
     console.error('handleAsk failed:', error);
     return `Error answering question: ${error instanceof Error ? error.message : 'Unknown error'}`;

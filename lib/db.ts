@@ -1,5 +1,5 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
-import { Issue, ThreadMessage } from './types';
+import { Issue, ThreadMessage, ThreadStats } from './types';
 
 let _sql: NeonQueryFunction<false, false>;
 
@@ -216,4 +216,43 @@ export async function vectorSearch(
     LIMIT ${limit}
   `;
   return rows.map((row) => parseRow(row) as Issue & { similarity: number });
+}
+
+export async function getThreadStats(
+  issue_id: string,
+): Promise<ThreadStats> {
+  const rows = await sql()`
+    SELECT COUNT(*)::int AS message_count,
+           COALESCE(SUM(LENGTH(content)), 0)::int AS total_chars
+    FROM thread_messages
+    WHERE issue_id = ${issue_id}
+  `;
+  return {
+    message_count: rows[0].message_count,
+    total_chars: rows[0].total_chars,
+  };
+}
+
+export async function getThreadStatsBatch(
+  issue_ids: string[],
+): Promise<Map<string, ThreadStats>> {
+  if (issue_ids.length === 0) return new Map();
+
+  const rows = await sql()`
+    SELECT issue_id,
+           COUNT(*)::int AS message_count,
+           COALESCE(SUM(LENGTH(content)), 0)::int AS total_chars
+    FROM thread_messages
+    WHERE issue_id = ANY(${issue_ids})
+    GROUP BY issue_id
+  `;
+
+  const map = new Map<string, ThreadStats>();
+  for (const row of rows) {
+    map.set(row.issue_id as string, {
+      message_count: row.message_count as number,
+      total_chars: row.total_chars as number,
+    });
+  }
+  return map;
 }

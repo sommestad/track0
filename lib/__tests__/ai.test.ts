@@ -33,7 +33,7 @@ const sampleMessages: ThreadMessage[] = [
     id: 1,
     issue_id: 'wi_test1234',
     timestamp: '2025-01-01T10:00:00Z',
-    role: 'claude',
+    role: 'assistant',
     content: 'Need to add rate limiting to the API.',
   },
 ];
