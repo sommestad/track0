@@ -19,6 +19,7 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
+  maxAge: 60 * 60 * 24 * 7,
 };
 
 export async function POST(request: NextRequest) {
@@ -30,7 +31,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
   const provided_token = body.token;
 
   if (

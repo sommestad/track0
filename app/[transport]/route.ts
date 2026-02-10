@@ -10,6 +10,7 @@ const handler = createMcpHandler(
       {
         message: z
           .string()
+          .min(1)
           .max(10000)
           .describe('Natural language message about an issue'),
         issue_id: z
@@ -30,7 +31,7 @@ const handler = createMcpHandler(
       'track0_ask',
       'Ask a question about your issues. Uses semantic search to find relevant items.',
       {
-        question: z.string().max(2000).describe('Natural language question'),
+        question: z.string().min(1).max(2000).describe('Natural language question'),
       },
       async ({ question }) => {
         const result = await handleAsk(question);
@@ -58,13 +59,29 @@ const handler = createMcpHandler(
   },
 );
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  if (bufA.byteLength !== bufB.byteLength) {
+    return false;
+  }
+  let mismatch = 0;
+  for (let i = 0; i < bufA.byteLength; i++) {
+    mismatch |= bufA[i] ^ bufB[i];
+  }
+  return mismatch === 0;
+}
+
 const verifyToken = async (
   _req: Request,
   bearerToken?: string,
 ): Promise<
   { token: string; clientId: string; scopes: string[] } | undefined
 > => {
-  if (!bearerToken || bearerToken !== process.env.TRACK0_TOKEN) return undefined;
+  const expected = process.env.TRACK0_TOKEN;
+  if (!expected || !bearerToken) return undefined;
+  if (!timingSafeEqual(bearerToken, expected)) return undefined;
   return { token: bearerToken, clientId: 'tracker', scopes: [] };
 };
 
