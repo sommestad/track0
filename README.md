@@ -39,6 +39,23 @@ Add to `.mcp.json` in any repo:
 }
 ```
 
+## Recommended usage from CLAUDE.md
+
+Add a guideline to your project's `CLAUDE.md` so the coding agent logs significant work automatically:
+
+```markdown
+## Work Tracking
+
+When starting work that looks like a significant feature, meaningful change, or non-trivial bug fix,
+use `mcp__track0__track0_tell` to log what's being worked on. Skip this for small tweaks, formatting,
+or minor refactors.
+
+When committing, pushing, or creating a PR for significant work, also update track0 with what was
+done — include a summary of the changes, not just "committed" or "PR created".
+```
+
+This keeps track0 populated with the important stuff without noise from every small change. Adapt the second paragraph to match your workflow — if you use custom skills for `/commit` or `/commit-push-pr`, you can add the track0 step directly to those skills instead of relying on the CLAUDE.md nudge.
+
 ## Stack
 
 - Next.js (App Router)
