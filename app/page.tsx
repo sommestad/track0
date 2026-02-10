@@ -1,69 +1,8 @@
-import Link from 'next/link';
 import { ensureSchema, getIssuesByStatus } from '@/lib/db';
-import { Issue } from '@/lib/types';
+import { STATUS_ORDER, STATUS_COLORS, STATUS_BORDERS } from '@/lib/constants';
+import { IssueCard } from '@/components/issue-card';
 import { LogoutButton } from './logout-button';
-
-const STATUS_ORDER = ['active', 'open', 'done'] as const;
-
-const STATUS_COLORS: Record<string, string> = {
-  active: 'text-[var(--green)]',
-  open: 'text-[var(--yellow)]',
-  done: 'text-[var(--muted)]',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  bug: 'BUG',
-  feature: 'FEAT',
-  task: 'TASK',
-};
-
-function PriorityIndicator({ priority }: { priority: number }) {
-  const bars = 5 - priority;
-  return (
-    <span className="inline-flex gap-0.5 items-end h-3" title={`P${priority}`}>
-      {[1, 2, 3, 4].map((i) => (
-        <span
-          key={i}
-          className={`w-1 rounded-sm ${i <= bars ? 'bg-foreground' : 'bg-border'}`}
-          style={{ height: `${40 + i * 15}%` }}
-        />
-      ))}
-    </span>
-  );
-}
-
-function IssueCard({ issue }: { issue: Issue }) {
-  return (
-    <Link
-      href={`/issue/${issue.id}`}
-      className="block border border-border rounded-md p-4 hover:border-muted transition-colors"
-    >
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-muted text-xs">{issue.id}</span>
-        <span className="text-xs px-1.5 py-0.5 rounded bg-border">
-          {TYPE_LABELS[issue.type] || issue.type}
-        </span>
-        <PriorityIndicator priority={issue.priority} />
-      </div>
-      <div className="font-medium mb-2">{issue.title}</div>
-      {issue.labels.length > 0 && (
-        <div className="flex gap-1.5 mb-2">
-          {issue.labels.map((label) => (
-            <span
-              key={label}
-              className="text-xs text-muted px-1.5 py-0.5 rounded border border-border"
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-      )}
-      {issue.summary && (
-        <p className="text-sm text-muted line-clamp-2">{issue.summary}</p>
-      )}
-    </Link>
-  );
-}
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,36 +21,41 @@ export default async function Dashboard() {
   ).length;
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-12">
-      <div className="flex items-baseline justify-between mb-8">
-        <h1 className="text-2xl font-bold">track0</h1>
-        <div className="flex items-baseline gap-4">
-          <span className="text-sm text-muted">
+    <main className="max-w-3xl mx-auto px-4 py-6">
+      <div className="flex items-baseline justify-between mb-4">
+        <h1 className="text-base font-bold">track0</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
             {open_count} open / {total} total
           </span>
+          <ThemeToggle />
           <LogoutButton />
         </div>
       </div>
 
       {grouped.length === 0 ? (
-        <div className="text-center text-muted py-20">
-          <p className="text-lg mb-2">No issues yet</p>
-          <p className="text-sm">
+        <div className="text-center text-muted-foreground py-12">
+          <p className="text-sm mb-2">No issues yet</p>
+          <p className="text-xs">
             Use{' '}
-            <code className="bg-border px-1.5 py-0.5 rounded">track0_tell</code>{' '}
+            <code className="bg-muted px-1 py-0.5 text-[0.625rem]">
+              track0_tell
+            </code>{' '}
             from Claude Code to create one.
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-4">
           {grouped.map(({ status, issues }) => (
             <section key={status}>
-              <h2
-                className={`text-sm font-medium uppercase tracking-wider mb-3 ${STATUS_COLORS[status]}`}
-              >
-                {status} ({issues.length})
-              </h2>
-              <div className="space-y-3">
+              <div className={`border-l-2 pl-2 mb-2 ${STATUS_BORDERS[status]}`}>
+                <h2
+                  className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status]}`}
+                >
+                  {status} ({issues.length})
+                </h2>
+              </div>
+              <div className="space-y-1">
                 {issues.map((issue) => (
                   <IssueCard key={issue.id} issue={issue} />
                 ))}

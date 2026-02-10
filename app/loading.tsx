@@ -1,22 +1,28 @@
+import { Skeleton } from '@/components/ui/skeleton';
+
 export default function Loading() {
   return (
-    <main className="max-w-3xl mx-auto px-4 py-12">
-      <div className="flex items-baseline justify-between mb-8">
-        <div className="h-8 w-32 bg-border rounded animate-pulse" />
-        <div className="h-4 w-24 bg-border rounded animate-pulse" />
+    <main className="max-w-3xl mx-auto px-4 py-6">
+      <div className="flex items-baseline justify-between mb-4">
+        <Skeleton className="h-5 w-16" />
+        <Skeleton className="h-3 w-24" />
       </div>
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="border border-border rounded-md p-4 space-y-2"
-          >
-            <div className="flex gap-3">
-              <div className="h-4 w-16 bg-border rounded animate-pulse" />
-              <div className="h-4 w-12 bg-border rounded animate-pulse" />
+      <div className="space-y-4">
+        {[1, 2].map((section) => (
+          <div key={section} className="space-y-1">
+            <div className="border-l-2 border-muted pl-2 mb-2">
+              <Skeleton className="h-3 w-20" />
             </div>
-            <div className="h-5 w-3/4 bg-border rounded animate-pulse" />
-            <div className="h-4 w-full bg-border rounded animate-pulse" />
+            {[1, 2].map((card) => (
+              <div
+                key={card}
+                className="border-l-2 border-muted pl-2 pr-3 py-2"
+              >
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-2.5 w-1/2 mt-1" />
+                <Skeleton className="h-2.5 w-12 mt-1" />
+              </div>
+            ))}
           </div>
         ))}
       </div>

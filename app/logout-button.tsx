@@ -1,10 +1,13 @@
 'use client';
 
-export function LogoutButton() {
+import { Button } from '@/components/ui/button';
+
+export function LogoutButton(): React.ReactNode {
   return (
-    <button
-      type="button"
-      className="text-xs text-muted hover:text-foreground transition-colors"
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-xs text-muted-foreground hover:text-foreground"
       onClick={() => {
         fetch('/api/auth', { method: 'DELETE' })
           .catch(() => {})
@@ -14,6 +17,6 @@ export function LogoutButton() {
       }}
     >
       logout
-    </button>
+    </Button>
   );
 }
