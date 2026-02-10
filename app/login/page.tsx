@@ -2,6 +2,10 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function LoginPage() {
   const [token, setToken] = useState('');
@@ -35,36 +39,34 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
+    <main className="min-h-screen flex items-center justify-center px-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-xs">
-        <h1 className="text-xl font-bold mb-6 text-center">track0</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <h1 className="text-base font-bold mb-4 text-center">track0</h1>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label htmlFor="token" className="block text-sm text-muted mb-1">
+            <Label htmlFor="token" className="text-muted-foreground mb-1">
               Dashboard token
-            </label>
-            <input
+            </Label>
+            <Input
               id="token"
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="Enter token"
               autoFocus
-              className="w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent"
             />
           </div>
           {error && (
-            <p className="text-sm text-[var(--red)]" role="alert">
+            <p className="text-xs text-[var(--red)]" role="alert">
               {error}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={loading || !token}
-            className="w-full bg-foreground text-background rounded-md py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-          >
+          <Button type="submit" disabled={loading || !token} className="w-full">
             {loading ? 'Verifying...' : 'Log in'}
-          </button>
+          </Button>
         </form>
       </div>
     </main>

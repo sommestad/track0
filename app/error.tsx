@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+
 export default function Error({
   reset,
 }: {
@@ -9,15 +11,10 @@ export default function Error({
   return (
     <main className="max-w-3xl mx-auto px-4 py-12 text-center">
       <h1 className="text-xl font-bold mb-4">Something went wrong</h1>
-      <p className="text-sm text-muted mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         Failed to load the dashboard. This is likely a temporary issue.
       </p>
-      <button
-        onClick={reset}
-        className="bg-foreground text-background rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
-      >
-        Try again
-      </button>
+      <Button onClick={reset}>Try again</Button>
     </main>
   );
 }

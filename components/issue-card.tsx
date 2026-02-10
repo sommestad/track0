@@ -1,0 +1,35 @@
+import Link from 'next/link';
+import { PriorityIndicator } from '@/components/priority-indicator';
+import { timeAgo, ageOpacity } from '@/lib/format';
+import type { Issue } from '@/lib/types';
+
+interface IssueCardProps {
+  issue: Issue;
+}
+
+export function IssueCard({ issue }: IssueCardProps): React.ReactNode {
+  const opacity = ageOpacity(issue.updated_at);
+
+  return (
+    <Link
+      href={`/issue/${issue.id}`}
+      className="block border-l-2 border-primary bg-card/30 pl-2 pr-3 py-2 hover:bg-card transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-xs">{issue.title}</span>
+        <PriorityIndicator priority={issue.priority} />
+      </div>
+      {issue.summary && (
+        <p className="text-[0.625rem] text-muted-foreground line-clamp-1 mt-1">
+          {issue.summary}
+        </p>
+      )}
+      <p
+        className="text-[0.625rem] text-muted-foreground mt-1"
+        style={{ opacity }}
+      >
+        {timeAgo(issue.updated_at)}
+      </p>
+    </Link>
+  );
+}
