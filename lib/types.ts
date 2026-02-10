@@ -22,10 +22,7 @@ export interface ThreadMessage {
 }
 
 export const IssueFieldsSchema = z.object({
-  title: z
-    .string()
-    .max(120)
-    .describe('Short imperative title, <60 chars'),
+  title: z.string().max(120).describe('Short imperative title, <60 chars'),
   type: z.enum(['bug', 'feature', 'task']),
   status: z.enum(['open', 'active', 'done']),
   priority: z.number().min(1).max(5),

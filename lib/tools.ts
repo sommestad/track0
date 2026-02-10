@@ -11,10 +11,7 @@ import {
   vectorSearch,
 } from './db';
 import { extractFields, generateEmbedding, answerQuestion } from './ai';
-import {
-  formatIssueConfirmation,
-  formatIssueDetail,
-} from './format';
+import { formatIssueConfirmation, formatIssueDetail } from './format';
 import { Issue } from './types';
 
 const THREAD_CONTEXT_LIMIT = 20;

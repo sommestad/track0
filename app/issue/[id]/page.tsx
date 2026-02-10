@@ -81,10 +81,7 @@ export default async function IssuePage({
           </h2>
           <div className="space-y-4">
             {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className="border border-border rounded-md p-4"
-              >
+              <div key={msg.id} className="border border-border rounded-md p-4">
                 <div className="flex items-center gap-3 mb-2">
                   <span
                     className={`text-xs font-medium ${ROLE_COLORS[msg.role] || 'text-muted'}`}

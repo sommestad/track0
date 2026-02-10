@@ -31,7 +31,11 @@ const handler = createMcpHandler(
       'track0_ask',
       'Ask a question about your issues. Uses semantic search to find relevant items.',
       {
-        question: z.string().min(1).max(2000).describe('Natural language question'),
+        question: z
+          .string()
+          .min(1)
+          .max(2000)
+          .describe('Natural language question'),
       },
       async ({ question }) => {
         const result = await handleAsk(question);
