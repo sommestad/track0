@@ -1,0 +1,12 @@
+{
+  "env": {
+    "OPENAI_API_KEY": {
+      "description": "OpenAI API key for LLM extraction and embeddings",
+      "required": true
+    },
+    "TRACK0_TOKEN": {
+      "description": "Bearer token for MCP API authentication. Generate a random string.",
+      "required": true
+    }
+  }
+}
