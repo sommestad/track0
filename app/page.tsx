@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ensureSchema, getIssuesByStatus } from '@/lib/db';
 import { Issue } from '@/lib/types';
+import { LogoutButton } from './logout-button';
 
 const STATUS_ORDER = ['active', 'open', 'done'] as const;
 
@@ -87,9 +88,12 @@ export default async function Dashboard() {
     <main className="max-w-3xl mx-auto px-4 py-12">
       <div className="flex items-baseline justify-between mb-8">
         <h1 className="text-2xl font-bold">track0</h1>
-        <span className="text-sm text-muted">
-          {open_count} open / {total} total
-        </span>
+        <div className="flex items-baseline gap-4">
+          <span className="text-sm text-muted">
+            {open_count} open / {total} total
+          </span>
+          <LogoutButton />
+        </div>
       </div>
 
       {grouped.length === 0 ? (

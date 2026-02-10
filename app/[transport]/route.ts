@@ -10,9 +10,11 @@ const handler = createMcpHandler(
       {
         message: z
           .string()
+          .max(10000)
           .describe('Natural language message about an issue'),
         issue_id: z
           .string()
+          .max(20)
           .optional()
           .describe(
             'Existing issue ID to update (e.g. wi_abc123). Omit to create new.',
@@ -28,7 +30,7 @@ const handler = createMcpHandler(
       'track0_ask',
       'Ask a question about your issues. Uses semantic search to find relevant items.',
       {
-        question: z.string().describe('Natural language question'),
+        question: z.string().max(2000).describe('Natural language question'),
       },
       async ({ question }) => {
         const result = await handleAsk(question);
@@ -40,7 +42,7 @@ const handler = createMcpHandler(
       'track0_get',
       'Get full details and conversation thread for one issue.',
       {
-        id: z.string().describe('Issue ID (e.g. wi_a3Kx)'),
+        id: z.string().max(20).describe('Issue ID (e.g. wi_a3Kx)'),
       },
       async ({ id }) => {
         const result = await handleGet(id);

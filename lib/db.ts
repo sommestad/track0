@@ -5,7 +5,10 @@ let _sql: NeonQueryFunction<false, false>;
 
 function sql() {
   if (!_sql) {
-    _sql = neon(process.env.DATABASE_URL!);
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    _sql = neon(process.env.DATABASE_URL);
   }
   return _sql;
 }
