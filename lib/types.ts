@@ -25,7 +25,7 @@ export const IssueFieldsSchema = z.object({
   title: z.string().max(120).describe('Short imperative title, <60 chars'),
   type: z.enum(['bug', 'feature', 'task']),
   status: z.enum(['open', 'active', 'done']),
-  priority: z.number().min(1).max(5),
+  priority: z.number().min(1).max(4),
   labels: z.array(z.string().max(50)).max(10),
   summary: z
     .string()

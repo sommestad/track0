@@ -8,7 +8,7 @@ RULES:
 - title: short imperative form, <120 chars (e.g. "Add rate limiting to memory API")
 - type: "bug" if it describes a problem/error, "feature" if new functionality, "task" for everything else
 - status: "open" if not started, "active" if work mentioned/in progress, "done" ONLY if explicitly completed/closed/merged
-- priority: 1=critical, 2=high, 3=medium, 4=low, 5=someday. Infer from urgency words or explicit priority mentions. Default 3.
+- priority: 1=critical, 2=high, 3=low, 4=backlog. No middle ground — pick a side. Infer from urgency words or explicit priority mentions. Default 3.
 - labels: extract relevant topic tags (e.g. "backend", "auth", "performance"). Max 10.
 - summary: 2-3 sentences describing the CURRENT state for a human reading a dashboard. Include key decisions and next steps.`;
 
