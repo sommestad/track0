@@ -1,5 +1,5 @@
 import { generateText, embed, Output, NoObjectGeneratedError } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { gateway } from '@ai-sdk/gateway';
 import { IssueFieldsSchema, IssueFields, ThreadMessage, Issue } from './types';
 
 const EXTRACTION_PROMPT = `You are a structured data extractor for an issue tracker. Given the conversation thread below, extract the current state of this issue.
@@ -50,7 +50,7 @@ export async function extractFields(
 
   try {
     const result = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: gateway('openai/gpt-4o-mini'),
       prompt: `${EXTRACTION_PROMPT}\n${summaryContext}\nTHREAD:\n${threadContext}`,
       output: Output.object({ schema: IssueFieldsSchema }),
     });
@@ -69,7 +69,7 @@ export async function generateEmbedding(
 ): Promise<number[] | null> {
   try {
     const result = await embed({
-      model: openai.embeddingModel('text-embedding-3-small'),
+      model: gateway.textEmbeddingModel('openai/text-embedding-3-small'),
       value: text,
     });
     return result.embedding;
@@ -87,7 +87,7 @@ export async function answerQuestion(
 
   try {
     const result = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: gateway('openai/gpt-4o-mini'),
       prompt: `${QA_PROMPT}\n\nISSUES:\n${issueContext}\n\nQUESTION: ${question}`,
     });
     return result.text;

@@ -13,7 +13,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.26",
+    "@ai-sdk/gateway": "^3.0.39",
     "@neondatabase/serverless": "^1.0.2",
     "ai": "^6.0.78",
     "mcp-handler": "^1.0.7",

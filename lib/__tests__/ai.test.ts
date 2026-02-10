@@ -12,11 +12,11 @@ vi.mock('ai', async (importOriginal) => {
   };
 });
 
-vi.mock('@ai-sdk/openai', () => ({
-  openai: Object.assign(
+vi.mock('@ai-sdk/gateway', () => ({
+  gateway: Object.assign(
     vi.fn(() => 'mock-model'),
     {
-      embeddingModel: vi.fn(() => 'mock-embedding-model'),
+      textEmbeddingModel: vi.fn(() => 'mock-embedding-model'),
     },
   ),
 }));

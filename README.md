@@ -18,7 +18,7 @@ Claude Code talks to it via 3 MCP tools. A server-side LLM derives structured st
 
 You'll need:
 
-- **OPENAI_API_KEY** — for LLM extraction and embeddings
+- **AI_GATEWAY_API_KEY** — for LLM extraction and embeddings via Vercel AI Gateway
 - **TRACK0_TOKEN** — bearer token for MCP auth (generate a random string)
 - **DATABASE_URL** — auto-provisioned by Neon integration
 
