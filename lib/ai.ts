@@ -1,6 +1,13 @@
 import { generateText, embed, Output, NoObjectGeneratedError } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
-import { IssueFieldsSchema, IssueFields, ThreadMessage, Issue } from './types';
+import {
+  IssueFieldsSchema,
+  IssueFields,
+  ThreadMessage,
+  Issue,
+  ThreadStats,
+} from './types';
+import { formatCharCount } from './format';
 
 const EXTRACTION_PROMPT = `You are a structured data extractor for an issue tracker. Extract the current state from the conversation thread.
 
@@ -46,12 +53,19 @@ function formatThreadForExtraction(messages: ThreadMessage[]): string {
     .join('\n\n');
 }
 
-function formatIssuesForQA(issues: Issue[]): string {
+function formatIssuesForQA(
+  issues: Issue[],
+  stats_map: Map<string, ThreadStats>,
+): string {
   return issues
-    .map(
-      (i) =>
-        `${i.id} | P${i.priority} ${i.type} | ${i.status} | ${i.title}\n  ${i.summary}`,
-    )
+    .map((i) => {
+      const updated = new Date(i.updated_at).toISOString().slice(0, 10);
+      const stats = stats_map.get(i.id);
+      const thread_info = stats
+        ? ` | ${stats.message_count} msgs ${formatCharCount(stats.total_chars)}`
+        : '';
+      return `${i.id} | P${i.priority} ${i.type} | ${i.status} | ${i.title} | updated ${updated}${thread_info}\n  ${i.summary}`;
+    })
     .join('\n\n');
 }
 
@@ -99,8 +113,9 @@ export async function generateEmbedding(
 export async function answerQuestion(
   question: string,
   issues: Issue[],
+  stats_map: Map<string, ThreadStats>,
 ): Promise<string> {
-  const issueContext = formatIssuesForQA(issues);
+  const issueContext = formatIssuesForQA(issues, stats_map);
 
   try {
     const result = await generateText({

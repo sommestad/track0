@@ -1,4 +1,4 @@
-import { Issue, ThreadMessage } from './types';
+import { Issue, ThreadMessage, ThreadStats } from './types';
 
 const MINUTE = 60;
 const HOUR = 3600;
@@ -45,19 +45,46 @@ export function ageOpacity(date: string | Date): number {
   return 0.85;
 }
 
+export function computeThreadStats(messages: ThreadMessage[]): ThreadStats {
+  return {
+    message_count: messages.length,
+    total_chars: messages.reduce((sum, m) => sum + m.content.length, 0),
+  };
+}
+
+export function formatCharCount(chars: number): string {
+  if (chars < 1000) return `~${chars} chars`;
+  if (chars < 10000) return `~${(chars / 1000).toFixed(1)}k chars`;
+  return `~${Math.round(chars / 1000)}k chars`;
+}
+
+export function formatThreadStats(stats: ThreadStats): string {
+  const chars = formatCharCount(stats.total_chars);
+  const base = `[thread: ${stats.message_count} msg${stats.message_count !== 1 ? 's' : ''}, ${chars}]`;
+
+  if (stats.message_count < 2 && stats.total_chars < 200) {
+    return `${base.slice(0, -1)} — context is thin, consider providing more detail]`;
+  }
+  return base;
+}
+
 export function formatIssueConfirmation(
   issue: Issue,
   action: 'Created' | 'Updated',
+  stats: ThreadStats,
 ): string {
   const labels = issue.labels.length > 0 ? issue.labels.join(', ') : 'none';
 
   return [
     `${action} ${issue.id}: "${issue.title}"`,
-    `TYPE: ${issue.type} | STATUS: ${issue.status} | PRIORITY: ${issue.priority}`,
-    `LABELS: ${labels}`,
-    '',
-    `SUMMARY: ${issue.summary || 'No summary yet.'}`,
+    `P${issue.priority} ${issue.type} | ${issue.status} | ${labels}`,
+    issue.summary || 'No summary yet.',
+    formatThreadStats(stats),
   ].join('\n');
+}
+
+function formatDate(date: string | Date): string {
+  return new Date(date).toISOString().slice(0, 10);
 }
 
 export function formatIssueDetail(
@@ -65,13 +92,14 @@ export function formatIssueDetail(
   messages: ThreadMessage[],
 ): string {
   const labels = issue.labels.length > 0 ? issue.labels.join(', ') : 'none';
+  const stats = computeThreadStats(messages);
 
   const header = [
-    `${issue.id} | ${issue.title}`,
-    `STATUS: ${issue.status} | TYPE: ${issue.type} | PRIORITY: ${issue.priority}`,
-    `LABELS: ${labels}`,
+    `${issue.id}: "${issue.title}"`,
+    `P${issue.priority} ${issue.type} | ${issue.status} | ${labels}`,
+    `Created ${formatDate(issue.created_at)} | Updated ${formatDate(issue.updated_at)}`,
     '',
-    `SUMMARY: ${issue.summary || 'No summary yet.'}`,
+    issue.summary || 'No summary yet.',
   ].join('\n');
 
   if (messages.length === 0) {
@@ -88,7 +116,8 @@ export function formatIssueDetail(
     })
     .join('\n\n');
 
-  return `${header}\n\nTHREAD:\n${thread}`;
+  const chars = formatCharCount(stats.total_chars);
+  return `${header}\n\nTHREAD (${stats.message_count} msg${stats.message_count !== 1 ? 's' : ''}, ${chars}):\n${thread}`;
 }
 
 export function formatIssueList(issues: Issue[]): string {

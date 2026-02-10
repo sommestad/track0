@@ -11,6 +11,8 @@ vi.mock('../db', () => ({
   getThreadMessages: vi.fn(),
   getNonDoneIssues: vi.fn(),
   vectorSearch: vi.fn(),
+  getThreadStats: vi.fn(),
+  getThreadStatsBatch: vi.fn(),
 }));
 
 vi.mock('../ai', () => ({
@@ -22,6 +24,7 @@ vi.mock('../ai', () => ({
 vi.mock('../format', () => ({
   formatIssueConfirmation: vi.fn(),
   formatIssueDetail: vi.fn(),
+  computeThreadStats: vi.fn(),
 }));
 
 import {
@@ -35,9 +38,15 @@ import {
   getThreadMessages,
   getNonDoneIssues,
   vectorSearch,
+  getThreadStats,
+  getThreadStatsBatch,
 } from '../db';
 import { extractFields, generateEmbedding, answerQuestion } from '../ai';
-import { formatIssueConfirmation, formatIssueDetail } from '../format';
+import {
+  formatIssueConfirmation,
+  formatIssueDetail,
+  computeThreadStats,
+} from '../format';
 import { handleTell, handleAsk, handleGet } from '../tools';
 import { Issue } from '../types';
 
@@ -51,6 +60,8 @@ const mockAddThreadMessage = vi.mocked(addThreadMessage);
 const mockGetThreadMessages = vi.mocked(getThreadMessages);
 const mockGetNonDoneIssues = vi.mocked(getNonDoneIssues);
 const mockVectorSearch = vi.mocked(vectorSearch);
+const mockGetThreadStats = vi.mocked(getThreadStats);
+const mockGetThreadStatsBatch = vi.mocked(getThreadStatsBatch);
 const mockExtractFields = vi.mocked(extractFields);
 const mockGenerateEmbedding = vi.mocked(generateEmbedding);
 const mockAnswerQuestion = vi.mocked(answerQuestion);
@@ -94,6 +105,10 @@ describe('handleTell', () => {
       mockGenerateEmbedding.mockResolvedValue([0.1, 0.2]);
       mockUpdateIssueFields.mockResolvedValue(undefined);
       mockUpdateIssueEmbedding.mockResolvedValue(undefined);
+      mockGetThreadStats.mockResolvedValue({
+        message_count: 1,
+        total_chars: 80,
+      });
       mockFormatIssueConfirmation.mockReturnValue('Created wi_new12345');
     });
 
@@ -102,9 +117,11 @@ describe('handleTell', () => {
 
       expect(mockGenerateIssueId).toHaveBeenCalledOnce();
       expect(mockCreateIssue).toHaveBeenCalledWith('wi_new12345');
+      expect(mockGetThreadStats).toHaveBeenCalledWith('wi_new12345');
       expect(mockFormatIssueConfirmation).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'wi_new12345' }),
         'Created',
+        { message_count: 1, total_chars: 80 },
       );
       expect(result).toBe('Created wi_new12345');
     });
@@ -116,6 +133,10 @@ describe('handleTell', () => {
       mockAddThreadMessage.mockResolvedValue(undefined);
       mockGetThreadMessages.mockResolvedValue([]);
       mockExtractFields.mockResolvedValue(null);
+      mockGetThreadStats.mockResolvedValue({
+        message_count: 3,
+        total_chars: 500,
+      });
       mockFormatIssueConfirmation.mockReturnValue('Updated wi_test1234');
     });
 
@@ -124,9 +145,11 @@ describe('handleTell', () => {
 
       expect(mockGenerateIssueId).not.toHaveBeenCalled();
       expect(mockCreateIssue).not.toHaveBeenCalled();
+      expect(mockGetThreadStats).toHaveBeenCalledWith('wi_test1234');
       expect(mockFormatIssueConfirmation).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'wi_test1234' }),
         'Updated',
+        { message_count: 3, total_chars: 500 },
       );
       expect(result).toBe('Updated wi_test1234');
     });
@@ -160,7 +183,7 @@ describe('handleTell', () => {
 
 describe('handleAsk', () => {
   describe('with results', () => {
-    it('should combine non-done and vector results', async () => {
+    it('should combine non-done and vector results and prefix with scope', async () => {
       const issueA = { ...sampleIssue, id: 'wi_aaaa' };
       const issueB = { ...sampleIssue, id: 'wi_bbbb' };
       const issueC = {
@@ -175,18 +198,24 @@ describe('handleAsk', () => {
         issueC as Issue & { similarity: number },
         { ...issueB, similarity: 0.8 } as Issue & { similarity: number },
       ]);
+      mockGetThreadStatsBatch.mockResolvedValue(new Map());
       mockAnswerQuestion.mockResolvedValue('Answer here.');
 
       const result = await handleAsk('What is next?');
 
+      expect(mockGetThreadStatsBatch).toHaveBeenCalledWith(
+        expect.arrayContaining(['wi_aaaa', 'wi_bbbb']),
+      );
       expect(mockAnswerQuestion).toHaveBeenCalledWith(
         'What is next?',
         expect.arrayContaining([
           expect.objectContaining({ id: 'wi_aaaa' }),
           expect.objectContaining({ id: 'wi_bbbb' }),
         ]),
+        expect.any(Map),
       );
-      expect(result).toBe('Answer here.');
+      expect(result).toContain('[2 issues matched, 1 total active]');
+      expect(result).toContain('Answer here.');
     });
   });
 
