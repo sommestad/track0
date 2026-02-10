@@ -60,6 +60,6 @@ This keeps track0 populated with the important stuff without noise from every sm
 ## Stack
 
 - Next.js (App Router)
-- Vercel AI SDK + gpt-4o-mini
+- Vercel AI SDK + GPT-5.2
 - Neon Postgres + pgvector
 - mcp-handler

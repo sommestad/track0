@@ -50,7 +50,8 @@ export async function extractFields(
 
   try {
     const result = await generateText({
-      model: gateway('openai/gpt-4o-mini'),
+      model: gateway('openai/gpt-5-2'),
+      providerOptions: { openai: { reasoningEffort: 'none' } },
       prompt: `${EXTRACTION_PROMPT}\n${summaryContext}\nTHREAD:\n${threadContext}`,
       output: Output.object({ schema: IssueFieldsSchema }),
     });
@@ -87,7 +88,8 @@ export async function answerQuestion(
 
   try {
     const result = await generateText({
-      model: gateway('openai/gpt-4o-mini'),
+      model: gateway('openai/gpt-5-2'),
+      providerOptions: { openai: { reasoningEffort: 'none' } },
       prompt: `${QA_PROMPT}\n\nISSUES:\n${issueContext}\n\nQUESTION: ${question}`,
     });
     return result.text;
