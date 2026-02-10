@@ -1,15 +1,15 @@
 import { generateText, embed, Output, NoObjectGeneratedError } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { gateway } from '@ai-sdk/gateway';
 import { IssueFieldsSchema, IssueFields, ThreadMessage, Issue } from './types';
 
 const EXTRACTION_PROMPT = `You are a structured data extractor for an issue tracker. Given the conversation thread below, extract the current state of this issue.
 
 RULES:
-- title: short imperative form, <60 chars (e.g. "Add rate limiting to memory API")
+- title: short imperative form, <120 chars (e.g. "Add rate limiting to memory API")
 - type: "bug" if it describes a problem/error, "feature" if new functionality, "task" for everything else
 - status: "open" if not started, "active" if work mentioned/in progress, "done" ONLY if explicitly completed/closed/merged
-- priority: 1=critical, 2=high, 3=medium, 4=low, 5=someday. Infer from urgency words or explicit priority mentions. Default 3.
-- labels: extract relevant topic tags (e.g. "backend", "auth", "performance"). Max 5.
+- priority: 1=critical, 2=high, 3=low, 4=backlog. No middle ground — pick a side. Infer from urgency words or explicit priority mentions. Default 3.
+- labels: extract relevant topic tags (e.g. "backend", "auth", "performance"). Max 10.
 - summary: 2-3 sentences describing the CURRENT state for a human reading a dashboard. Include key decisions and next steps.`;
 
 const QA_PROMPT = `You are an issue tracker assistant. Answer the user's question based on the issue data below.
@@ -50,7 +50,8 @@ export async function extractFields(
 
   try {
     const result = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: gateway('openai/gpt-5-2'),
+      providerOptions: { openai: { reasoningEffort: 'none' } },
       prompt: `${EXTRACTION_PROMPT}\n${summaryContext}\nTHREAD:\n${threadContext}`,
       output: Output.object({ schema: IssueFieldsSchema }),
     });
@@ -59,7 +60,8 @@ export async function extractFields(
     if (error instanceof NoObjectGeneratedError) {
       return null;
     }
-    throw error;
+    console.error('extractFields failed:', error);
+    return null;
   }
 }
 
@@ -68,11 +70,12 @@ export async function generateEmbedding(
 ): Promise<number[] | null> {
   try {
     const result = await embed({
-      model: openai.embeddingModel('text-embedding-3-small'),
+      model: gateway.textEmbeddingModel('openai/text-embedding-3-small'),
       value: text,
     });
     return result.embedding;
-  } catch {
+  } catch (error) {
+    console.error('generateEmbedding failed:', error);
     return null;
   }
 }
@@ -83,10 +86,15 @@ export async function answerQuestion(
 ): Promise<string> {
   const issueContext = formatIssuesForQA(issues);
 
-  const result = await generateText({
-    model: openai('gpt-4o-mini'),
-    prompt: `${QA_PROMPT}\n\nISSUES:\n${issueContext}\n\nQUESTION: ${question}`,
-  });
-
-  return result.text;
+  try {
+    const result = await generateText({
+      model: gateway('openai/gpt-5-2'),
+      providerOptions: { openai: { reasoningEffort: 'none' } },
+      prompt: `${QA_PROMPT}\n\nISSUES:\n${issueContext}\n\nQUESTION: ${question}`,
+    });
+    return result.text;
+  } catch (error) {
+    console.error('answerQuestion failed:', error);
+    return 'Failed to generate answer. Please try again.';
+  }
 }

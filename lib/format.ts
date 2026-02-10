@@ -4,8 +4,7 @@ export function formatIssueConfirmation(
   issue: Issue,
   action: 'Created' | 'Updated',
 ): string {
-  const labels =
-    issue.labels.length > 0 ? issue.labels.join(', ') : 'none';
+  const labels = issue.labels.length > 0 ? issue.labels.join(', ') : 'none';
 
   return [
     `${action} ${issue.id}: "${issue.title}"`,
@@ -20,8 +19,7 @@ export function formatIssueDetail(
   issue: Issue,
   messages: ThreadMessage[],
 ): string {
-  const labels =
-    issue.labels.length > 0 ? issue.labels.join(', ') : 'none';
+  const labels = issue.labels.length > 0 ? issue.labels.join(', ') : 'none';
 
   const header = [
     `${issue.id} | ${issue.title}`,

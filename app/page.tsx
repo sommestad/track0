@@ -18,17 +18,14 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 function PriorityIndicator({ priority }: { priority: number }) {
-  const bars = 6 - priority;
+  const bars = 5 - priority;
   return (
-    <span
-      className="inline-flex gap-0.5 items-end h-3"
-      title={`P${priority}`}
-    >
-      {[1, 2, 3, 4, 5].map((i) => (
+    <span className="inline-flex gap-0.5 items-end h-3" title={`P${priority}`}>
+      {[1, 2, 3, 4].map((i) => (
         <span
           key={i}
           className={`w-1 rounded-sm ${i <= bars ? 'bg-foreground' : 'bg-border'}`}
-          style={{ height: `${40 + i * 12}%` }}
+          style={{ height: `${40 + i * 15}%` }}
         />
       ))}
     </span>
@@ -101,9 +98,7 @@ export default async function Dashboard() {
           <p className="text-lg mb-2">No issues yet</p>
           <p className="text-sm">
             Use{' '}
-            <code className="bg-border px-1.5 py-0.5 rounded">
-              track0_tell
-            </code>{' '}
+            <code className="bg-border px-1.5 py-0.5 rounded">track0_tell</code>{' '}
             from Claude Code to create one.
           </p>
         </div>

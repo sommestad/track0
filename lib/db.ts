@@ -13,6 +13,17 @@ function sql() {
   return _sql;
 }
 
+function parseRow(row: Record<string, unknown>): Issue {
+  let labels: string[];
+  try {
+    labels =
+      typeof row.labels === 'string' ? JSON.parse(row.labels) : row.labels;
+  } catch {
+    labels = [];
+  }
+  return { ...row, labels } as Issue;
+}
+
 let schema_initialized = false;
 
 export async function ensureSchema() {
@@ -52,11 +63,32 @@ export async function ensureSchema() {
       USING hnsw (embedding vector_cosine_ops)
   `;
 
+  await sql()`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'thread_messages_issue_id_fkey'
+          AND table_name = 'thread_messages'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.referential_constraints
+        WHERE constraint_name = 'thread_messages_issue_id_fkey'
+          AND delete_rule = 'CASCADE'
+      ) THEN
+        ALTER TABLE thread_messages
+          DROP CONSTRAINT thread_messages_issue_id_fkey,
+          ADD CONSTRAINT thread_messages_issue_id_fkey
+            FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE;
+      END IF;
+    END $$
+  `;
+
   schema_initialized = true;
 }
 
 export function generateIssueId(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const chars =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = 'wi_';
   for (let i = 0; i < 8; i++) {
     result += chars[Math.floor(Math.random() * chars.length)];
@@ -74,11 +106,7 @@ export async function createIssue(id: string): Promise<void> {
 export async function getIssue(id: string): Promise<Issue | null> {
   const rows = await sql()`SELECT * FROM issues WHERE id = ${id}`;
   if (rows.length === 0) return null;
-  const row = rows[0];
-  return {
-    ...row,
-    labels: typeof row.labels === 'string' ? JSON.parse(row.labels) : row.labels,
-  } as Issue;
+  return parseRow(rows[0]);
 }
 
 export async function updateIssueFields(
@@ -161,10 +189,7 @@ export async function getIssuesByStatus(): Promise<Issue[]> {
       END,
       priority ASC
   `;
-  return rows.map((row) => ({
-    ...row,
-    labels: typeof row.labels === 'string' ? JSON.parse(row.labels) : row.labels,
-  })) as Issue[];
+  return rows.map(parseRow);
 }
 
 export async function getNonDoneIssues(): Promise<Issue[]> {
@@ -174,10 +199,7 @@ export async function getNonDoneIssues(): Promise<Issue[]> {
     WHERE status != 'done'
     ORDER BY priority ASC
   `;
-  return rows.map((row) => ({
-    ...row,
-    labels: typeof row.labels === 'string' ? JSON.parse(row.labels) : row.labels,
-  })) as Issue[];
+  return rows.map(parseRow);
 }
 
 export async function vectorSearch(
@@ -193,8 +215,5 @@ export async function vectorSearch(
     ORDER BY embedding <=> ${vectorString}::vector
     LIMIT ${limit}
   `;
-  return rows.map((row) => ({
-    ...row,
-    labels: typeof row.labels === 'string' ? JSON.parse(row.labels) : row.labels,
-  })) as (Issue & { similarity: number })[];
+  return rows.map((row) => parseRow(row) as Issue & { similarity: number });
 }

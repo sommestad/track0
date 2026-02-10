@@ -14,19 +14,24 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
 
-    if (res.ok) {
-      router.push('/');
-    } else {
-      const data = await res.json();
-      setError(data.error || 'Invalid token');
+      if (res.ok) {
+        router.push('/');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Invalid token');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -34,15 +39,25 @@ export default function LoginPage() {
       <div className="w-full max-w-xs">
         <h1 className="text-xl font-bold mb-6 text-center">track0</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Dashboard token"
-            autoFocus
-            className="w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent"
-          />
-          {error && <p className="text-sm text-[var(--red)]">{error}</p>}
+          <div>
+            <label htmlFor="token" className="block text-sm text-muted mb-1">
+              Dashboard token
+            </label>
+            <input
+              id="token"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="Enter token"
+              autoFocus
+              className="w-full bg-transparent border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-[var(--red)]" role="alert">
+              {error}
+            </p>
+          )}
           <button
             type="submit"
             disabled={loading || !token}
