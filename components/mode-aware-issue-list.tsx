@@ -89,7 +89,7 @@ export function ModeAwareIssueList({
           LLM_STATUS_ORDER.indexOf(a.status) -
           LLM_STATUS_ORDER.indexOf(b.status),
       )
-      .filter((g) => g.issues.length > 0);
+      .filter((g) => g.issues.length > 0 && g.status !== 'done');
     return (
       <div className="space-y-5 text-xs font-mono">
         {nonEmpty.map(({ status, issues }) => (
