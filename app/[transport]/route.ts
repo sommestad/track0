@@ -10,14 +10,11 @@ const handler = createMcpHandler(
       {
         message: z
           .string()
-          .min(1)
-          .max(10000)
           .describe(
-            'Natural language message describing work done, a decision made, a problem found, or a status update for an issue',
+            'Natural language message describing work done, a decision made, a problem found, or a status update for an issue (max 10000 chars)',
           ),
         issue_id: z
           .string()
-          .max(20)
           .optional()
           .describe(
             'Existing issue ID to update (e.g. wi_abc123). Omit to create a new issue. Use track0_find first to check for duplicates.',
@@ -35,10 +32,8 @@ const handler = createMcpHandler(
       {
         question: z
           .string()
-          .min(1)
-          .max(2000)
           .describe(
-            'Natural language question about your tracked issues, e.g. "what bugs are open?" or "what should I work on next?"',
+            'Natural language question about your tracked issues (max 2000 chars), e.g. "what bugs are open?" or "what should I work on next?"',
           ),
       },
       async ({ question }) => {
@@ -53,17 +48,13 @@ const handler = createMcpHandler(
       {
         message: z
           .string()
-          .min(1)
-          .max(10000)
           .describe(
-            'Natural language description of the work or problem to search for similar existing issues',
+            'Natural language description of the work or problem to search for similar existing issues (max 10000 chars)',
           ),
         limit: z
           .number()
-          .min(1)
-          .max(20)
           .optional()
-          .describe('Maximum number of similar issues to return (default 5, max 20)'),
+          .describe('Max results to return, 1-20 (default 5)'),
       },
       async ({ message, limit }) => {
         const result = await handleFind(message, limit);
@@ -75,7 +66,7 @@ const handler = createMcpHandler(
       'track0_get',
       'Retrieve the complete details and full conversation thread for a single issue by its ID. Returns the issue title, type, status, priority, labels, summary, timestamps, and the entire message thread. Use this when you need to understand the full context and history of a specific issue before updating it, or when the user asks for details about a particular issue.',
       {
-        id: z.string().max(20).describe('Issue ID to retrieve (e.g. wi_a3Kx)'),
+        id: z.string().describe('Issue ID to retrieve (e.g. wi_a3Kx)'),
       },
       async ({ id }) => {
         const result = await handleGet(id);

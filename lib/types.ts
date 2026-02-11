@@ -27,15 +27,12 @@ export interface ThreadStats {
 }
 
 export const IssueFieldsSchema = z.object({
-  title: z.string().max(120).describe('Short imperative title'),
+  title: z.string().describe('Short imperative title, under 120 chars'),
   type: z.enum(['bug', 'feature', 'task']),
   status: z.enum(['open', 'active', 'done']),
-  priority: z.number().min(1).max(5),
-  labels: z.array(z.string().max(50)).max(10),
-  summary: z
-    .string()
-    .max(1000)
-    .describe('2-3 sentence summary of CURRENT state for a human dashboard'),
+  priority: z.number().describe('1 (critical) to 5 (negligible)'),
+  labels: z.array(z.string()).describe('3-8 relevant tags'),
+  summary: z.string().describe('2-3 sentence summary of current state'),
 });
 
 export type IssueFields = z.infer<typeof IssueFieldsSchema>;
