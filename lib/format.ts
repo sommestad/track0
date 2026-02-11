@@ -93,7 +93,7 @@ export function formatIssueConfirmation(
 }
 
 function formatDate(date: string | Date): string {
-  return new Date(date).toISOString().slice(0, 10);
+  return new Date(date).toISOString();
 }
 
 export function formatIssueDetail(
@@ -117,10 +117,7 @@ export function formatIssueDetail(
 
   const thread = messages
     .map((m) => {
-      const ts = new Date(m.timestamp)
-        .toISOString()
-        .slice(0, 16)
-        .replace('T', ' ');
+      const ts = new Date(m.timestamp).toISOString();
       return `[${ts} ${m.role}] ${m.content}`;
     })
     .join('\n\n');

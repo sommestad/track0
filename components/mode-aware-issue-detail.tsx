@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { StatusSelector } from '@/components/status-selector';
 import { STATUS_COLORS, ROLE_COLORS } from '@/lib/constants';
 import { formatCharCount, computeThreadStats } from '@/lib/format';
 import type { Issue, ThreadMessage } from '@/lib/types';
@@ -116,11 +117,9 @@ export function ModeAwareIssueDetail({
             {issue.type}
           </Badge>
           <Badge variant="secondary">P{issue.priority}</Badge>
-          <span
-            className={`text-[0.625rem] font-medium uppercase ${STATUS_COLORS[issue.status]}`}
-          >
-            {issue.status}
-          </span>
+          <div className="ml-auto">
+            <StatusSelector issueId={issue.id} currentStatus={issue.status} />
+          </div>
         </div>
 
         <h1 className="text-base font-bold mb-2">{issue.title}</h1>

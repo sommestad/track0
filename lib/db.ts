@@ -133,6 +133,15 @@ export async function updateIssueFields(
   `;
 }
 
+export async function updateIssueStatus(
+  id: string,
+  status: string,
+): Promise<void> {
+  await sql()`
+    UPDATE issues SET status = ${status}, updated_at = now() WHERE id = ${id}
+  `;
+}
+
 export async function updateIssueEmbedding(
   id: string,
   embedding: number[],

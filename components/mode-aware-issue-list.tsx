@@ -37,7 +37,7 @@ function LlmIssueLine({
   issue: Issue;
   stats: ThreadStats | undefined;
 }): React.ReactNode {
-  const updated = new Date(issue.updated_at).toISOString().slice(0, 10);
+  const updated = new Date(issue.updated_at).toISOString();
   const thread_info = stats
     ? `${stats.message_count} msg${stats.message_count !== 1 ? 's' : ''} ${formatCharCount(stats.total_chars)}`
     : undefined;
@@ -89,7 +89,7 @@ export function ModeAwareIssueList({
           LLM_STATUS_ORDER.indexOf(a.status) -
           LLM_STATUS_ORDER.indexOf(b.status),
       )
-      .filter((g) => g.issues.length > 0);
+      .filter((g) => g.issues.length > 0 && g.status !== 'done');
     return (
       <div className="space-y-5 text-xs font-mono">
         {nonEmpty.map(({ status, issues }) => (
