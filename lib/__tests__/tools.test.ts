@@ -25,6 +25,7 @@ vi.mock('../format', () => ({
   formatIssueConfirmation: vi.fn(),
   formatIssueDetail: vi.fn(),
   formatLowPriorityRejection: vi.fn(),
+  formatFindResults: vi.fn(),
   computeThreadStats: vi.fn(),
 }));
 
@@ -47,9 +48,10 @@ import {
   formatIssueConfirmation,
   formatIssueDetail,
   formatLowPriorityRejection,
+  formatFindResults,
   computeThreadStats,
 } from '../format';
-import { handleTell, handleAsk, handleGet } from '../tools';
+import { handleTell, handleAsk, handleGet, handleFind } from '../tools';
 import { Issue } from '../types';
 import { createBaseIssue, createBaseIssueFields } from '../test-util';
 
@@ -71,6 +73,7 @@ const mockAnswerQuestion = vi.mocked(answerQuestion);
 const mockFormatIssueConfirmation = vi.mocked(formatIssueConfirmation);
 const mockFormatIssueDetail = vi.mocked(formatIssueDetail);
 const mockFormatLowPriorityRejection = vi.mocked(formatLowPriorityRejection);
+const mockFormatFindResults = vi.mocked(formatFindResults);
 const mockComputeThreadStats = vi.mocked(computeThreadStats);
 
 const sampleIssue = createBaseIssue();
@@ -312,6 +315,85 @@ describe('handleGet', () => {
 
         expect(result).toContain('Error retrieving issue');
         expect(result).toContain('timeout');
+      }));
+  });
+});
+
+describe('handleFind', () => {
+  describe('with similar issues found', () => {
+    beforeEach(() => {
+      mockGenerateEmbedding.mockResolvedValue([0.1, 0.2]);
+      mockVectorSearch.mockResolvedValue([
+        {
+          ...createBaseIssue({ id: 'wi_sim1' }),
+          similarity: 0.9,
+        } as Issue & { similarity: number },
+        {
+          ...createBaseIssue({ id: 'wi_sim2' }),
+          similarity: 0.75,
+        } as Issue & { similarity: number },
+      ]);
+      mockFormatFindResults.mockReturnValue('wi_sim1 (90%) | ...');
+    });
+
+    it('should return formatted results', async () => {
+      const result = await handleFind('Some issue description');
+
+      expect(mockGenerateEmbedding).toHaveBeenCalledWith(
+        'Some issue description',
+      );
+      expect(mockVectorSearch).toHaveBeenCalledWith([0.1, 0.2], 5);
+      expect(mockFormatFindResults).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'wi_sim1', similarity: 0.9 }),
+          expect.objectContaining({ id: 'wi_sim2', similarity: 0.75 }),
+        ]),
+      );
+      expect(result).toBe('wi_sim1 (90%) | ...');
+    });
+
+    it('should respect limit parameter', async () => {
+      await handleFind('Some issue description', 10);
+
+      expect(mockVectorSearch).toHaveBeenCalledWith([0.1, 0.2], 10);
+    });
+  });
+
+  describe('with no similar issues', () => {
+    beforeEach(() => {
+      mockGenerateEmbedding.mockResolvedValue([0.1, 0.2]);
+      mockVectorSearch.mockResolvedValue([]);
+    });
+
+    it('should return "No similar issues found."', async () => {
+      const result = await handleFind('Unique message');
+
+      expect(result).toBe('No similar issues found.');
+    });
+  });
+
+  describe('when embedding fails', () => {
+    beforeEach(() => {
+      mockGenerateEmbedding.mockResolvedValue(null);
+    });
+
+    it('should return error message', async () => {
+      const result = await handleFind('Some message');
+
+      expect(result).toBe('Could not generate embedding for search.');
+      expect(mockVectorSearch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('on db failure', () => {
+    it('should return error string', () =>
+      withSuppressedConsoleError(async () => {
+        mockEnsureSchema.mockRejectedValue(new Error('DB down'));
+
+        const result = await handleFind('test message');
+
+        expect(result).toContain('Error searching issues');
+        expect(result).toContain('DB down');
       }));
   });
 });

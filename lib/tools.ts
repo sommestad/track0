@@ -17,6 +17,7 @@ import {
   formatIssueConfirmation,
   formatIssueDetail,
   formatLowPriorityRejection,
+  formatFindResults,
   computeThreadStats,
 } from './format';
 import { Issue, ThreadMessage } from './types';
@@ -48,6 +49,7 @@ async function handleNewIssue(message: string): Promise<string> {
 
   const issue_id = generateIssueId();
   await createIssue(issue_id);
+
   await addThreadMessage(issue_id, 'assistant', message);
   await updateIssueFields(issue_id, fields);
 
@@ -56,13 +58,13 @@ async function handleNewIssue(message: string): Promise<string> {
     await updateIssueEmbedding(issue_id, embedding);
   }
 
-  const created = await getIssue(issue_id);
-  if (!created) {
+  const issue = await getIssue(issue_id);
+  if (!issue) {
     return 'Failed to create issue';
   }
 
   const stats = computeThreadStats([virtual_message]);
-  return formatIssueConfirmation(created, 'Created', stats);
+  return formatIssueConfirmation(issue, 'Created', stats);
 }
 
 async function handleExistingIssue(
@@ -146,6 +148,30 @@ export async function handleAsk(question: string): Promise<string> {
   } catch (error) {
     console.error('handleAsk failed:', error);
     return `Error answering question: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+}
+
+export async function handleFind(
+  message: string,
+  limit: number = 5,
+): Promise<string> {
+  try {
+    await ensureSchema();
+
+    const embedding = await generateEmbedding(message);
+    if (!embedding) {
+      return 'Could not generate embedding for search.';
+    }
+
+    const results = await vectorSearch(embedding, limit);
+    if (results.length === 0) {
+      return 'No similar issues found.';
+    }
+
+    return formatFindResults(results);
+  } catch (error) {
+    console.error('handleFind failed:', error);
+    return `Error searching issues: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 }
 

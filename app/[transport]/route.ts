@@ -1,12 +1,12 @@
 import { createMcpHandler, withMcpAuth } from 'mcp-handler';
 import { z } from 'zod';
-import { handleTell, handleAsk, handleGet } from '@/lib/tools';
+import { handleTell, handleAsk, handleGet, handleFind } from '@/lib/tools';
 
 const handler = createMcpHandler(
   (server) => {
     server.tool(
       'track0_tell',
-      'Tell the tracker something. Creates a new issue or updates an existing one. Use natural language.',
+      'Tell the tracker something. Creates a new issue or updates an existing one. Use track0_find first to check for duplicates before creating.',
       {
         message: z
           .string()
@@ -39,6 +39,28 @@ const handler = createMcpHandler(
       },
       async ({ question }) => {
         const result = await handleAsk(question);
+        return { content: [{ type: 'text' as const, text: result }] };
+      },
+    );
+
+    server.tool(
+      'track0_find',
+      'Find existing issues similar to a message. Use before track0_tell to avoid duplicates.',
+      {
+        message: z
+          .string()
+          .min(1)
+          .max(10000)
+          .describe('Natural language message to find similar issues for'),
+        limit: z
+          .number()
+          .min(1)
+          .max(20)
+          .optional()
+          .describe('Max results to return (default 5)'),
+      },
+      async ({ message, limit }) => {
+        const result = await handleFind(message, limit);
         return { content: [{ type: 'text' as const, text: result }] };
       },
     );
