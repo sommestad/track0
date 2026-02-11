@@ -1,12 +1,12 @@
 import { createMcpHandler, withMcpAuth } from 'mcp-handler';
 import { z } from 'zod';
-import { handleTell, handleAsk, handleGet, handleFind } from '@/lib/tools';
+import { handleTell, handleAsk, handleGet } from '@/lib/tools';
 
 const handler = createMcpHandler(
   (server) => {
     server.tool(
       'track0_tell',
-      'Tell the tracker about work being done, decisions made, or problems found. Creates a new issue when no issue_id is provided, or appends to an existing issue thread when an issue_id is given. The tracker automatically extracts structured fields (title, type, status, priority, labels, summary) from your natural language message. Before creating a new issue, always use track0_find first to check for existing duplicates. Returns a confirmation with the issue ID and extracted fields.',
+      'Tell the tracker about work being done, decisions made, or problems found. Creates a new issue or updates an existing one. When no issue_id is provided, the tracker automatically searches for duplicates and either creates a new issue or updates a matching one. When an issue_id is given, it updates that issue directly. Extracts structured fields (title, type, status, priority, labels, summary) from your natural language message.',
       {
         message: z
           .string()
@@ -17,7 +17,7 @@ const handler = createMcpHandler(
           .string()
           .optional()
           .describe(
-            'Existing issue ID to update (e.g. wi_abc123). Omit to create a new issue. Use track0_find first to check for duplicates.',
+            'Existing issue ID to update (e.g. wi_abc123). Omit to let the tracker search for duplicates and decide.',
           ),
       },
       async ({ message, issue_id }) => {
@@ -28,7 +28,7 @@ const handler = createMcpHandler(
 
     server.tool(
       'track0_ask',
-      'Ask a natural language question about tracked issues and get an AI-generated answer grounded in actual issue data. Combines semantic vector search with issue lookup to find relevant items, then synthesizes an answer referencing specific issue IDs. Use this for analysis, summaries, prioritization advice, or questions like "what should I work on next?" or "what bugs are open?". Only references issues that actually exist in the tracker.',
+      'Ask a natural language question about tracked issues and get an AI-generated answer grounded in actual issue data. Searches for relevant issues, retrieves details as needed, and synthesizes an answer referencing specific issue IDs. Use this for analysis, summaries, prioritization advice, or questions like "what should I work on next?" or "what bugs are open?". Only references issues that actually exist in the tracker.',
       {
         question: z
           .string()
@@ -38,26 +38,6 @@ const handler = createMcpHandler(
       },
       async ({ question }) => {
         const result = await handleAsk(question);
-        return { content: [{ type: 'text' as const, text: result }] };
-      },
-    );
-
-    server.tool(
-      'track0_find',
-      'Find existing issues that are semantically similar to a given message using vector similarity search. Use this tool before calling track0_tell to check whether a matching issue already exists, avoiding duplicate entries. Returns up to the specified limit of matching issues ranked by similarity percentage, each with issue ID, priority, type, status, title, and summary. If no similar issues are found, it is safe to create a new one with track0_tell.',
-      {
-        message: z
-          .string()
-          .describe(
-            'Natural language description of the work or problem to search for similar existing issues (max 10000 chars)',
-          ),
-        limit: z
-          .number()
-          .optional()
-          .describe('Max results to return, 1-20 (default 5)'),
-      },
-      async ({ message, limit }) => {
-        const result = await handleFind(message, limit);
         return { content: [{ type: 'text' as const, text: result }] };
       },
     );

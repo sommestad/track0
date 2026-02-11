@@ -138,6 +138,33 @@ export function formatLowPriorityRejection(fields: IssueFields): string {
   ].join('\n');
 }
 
+export function issueSummaryPayload(issue: Issue) {
+  return {
+    id: issue.id,
+    title: issue.title,
+    type: issue.type,
+    status: issue.status,
+    priority: issue.priority,
+    summary: issue.summary,
+  };
+}
+
+export function searchResultsPayload(
+  results: (Issue & { similarity: number })[],
+) {
+  return results.map((r) => ({
+    ...issueSummaryPayload(r),
+    similarity: Math.round(r.similarity * 100),
+  }));
+}
+
+export function activeIssuesPayload(issues: Issue[]) {
+  return issues.map((i) => ({
+    ...issueSummaryPayload(i),
+    updated_at: i.updated_at,
+  }));
+}
+
 export function formatIssueLine(issue: Issue): string {
   return `${issue.id} | P${issue.priority} ${issue.type} | ${issue.status} | ${issue.title}\n  ${issue.summary || 'No summary yet.'}`;
 }

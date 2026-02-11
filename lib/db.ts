@@ -197,7 +197,7 @@ export async function getNonDoneIssues(): Promise<Issue[]> {
     SELECT id, title, type, status, priority, labels, summary, created_at, updated_at
     FROM issues
     WHERE status != 'done'
-    ORDER BY priority ASC
+    ORDER BY priority ASC, updated_at DESC
   `;
   return rows.map(parseRow);
 }

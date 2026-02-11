@@ -21,7 +21,7 @@ function useMounted(): boolean {
 }
 
 interface GroupedIssues {
-  status: string;
+  status: Issue['status'];
   issues: Issue[];
 }
 
