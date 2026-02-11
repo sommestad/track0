@@ -1,4 +1,4 @@
-import { Issue, ThreadMessage, ThreadStats } from './types';
+import { Issue, IssueFields, ThreadMessage, ThreadStats } from './types';
 
 const MINUTE = 60;
 const HOUR = 3600;
@@ -8,9 +8,7 @@ const MONTH = 2592000;
 const YEAR = 31536000;
 
 export function timeAgo(date: string | Date): string {
-  const seconds = Math.floor(
-    (Date.now() - new Date(date).getTime()) / 1000,
-  );
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   if (seconds < MINUTE) return 'just now';
   if (seconds < HOUR) {
     const m = Math.floor(seconds / MINUTE);
@@ -118,6 +116,15 @@ export function formatIssueDetail(
 
   const chars = formatCharCount(stats.total_chars);
   return `${header}\n\nTHREAD (${stats.message_count} msg${stats.message_count !== 1 ? 's' : ''}, ${chars}):\n${thread}`;
+}
+
+export function formatLowPriorityRejection(fields: IssueFields): string {
+  return [
+    `Not tracked (P${fields.priority} — below threshold): "${fields.title}"`,
+    `Evaluated as: ${fields.type} | ${fields.summary}`,
+    '',
+    'To track this, provide more context about its impact or urgency.',
+  ].join('\n');
 }
 
 export function formatIssueList(issues: Issue[]): string {

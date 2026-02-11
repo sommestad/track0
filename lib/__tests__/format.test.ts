@@ -3,24 +3,23 @@ import {
   formatIssueConfirmation,
   formatIssueDetail,
   formatIssueList,
+  formatLowPriorityRejection,
   computeThreadStats,
   formatThreadStats,
   formatCharCount,
 } from '../format';
-import { Issue, ThreadMessage, ThreadStats } from '../types';
+import { ThreadMessage, ThreadStats } from '../types';
+import { createBaseIssue, createBaseIssueFields } from '../test-util';
 
-const baseIssue: Issue = {
+const baseIssue = createBaseIssue({
   id: 'wi_abc12345',
   title: 'Add rate limiting',
   type: 'feature',
-  status: 'open',
   priority: 2,
   labels: ['backend', 'api'],
   summary: 'Need rate limiting on the memory API.',
-  embedding: null,
-  created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-15T00:00:00Z',
-};
+});
 
 describe('formatCharCount', () => {
   it('should show raw number for < 1000 chars', () => {
@@ -127,14 +126,14 @@ describe('formatIssueConfirmation', () => {
   });
 
   it('should show "none" when labels are empty', () => {
-    const issue = { ...baseIssue, labels: [] };
+    const issue = createBaseIssue({ labels: [] });
     const result = formatIssueConfirmation(issue, 'Created', defaultStats);
 
     expect(result).toContain('| none');
   });
 
   it('should show "No summary yet." when summary is empty', () => {
-    const issue = { ...baseIssue, summary: '' };
+    const issue = createBaseIssue({ summary: '' });
     const result = formatIssueConfirmation(issue, 'Created', defaultStats);
 
     expect(result).toContain('No summary yet.');
@@ -214,16 +213,15 @@ describe('formatIssueList', () => {
   });
 
   it('should format multiple issues', () => {
-    const issues: Issue[] = [
+    const issues = [
       baseIssue,
-      {
-        ...baseIssue,
+      createBaseIssue({
         id: 'wi_def67890',
         title: 'Fix login bug',
         type: 'bug',
         status: 'active',
         priority: 1,
-      },
+      }),
     ];
 
     const result = formatIssueList(issues);
@@ -232,5 +230,26 @@ describe('formatIssueList', () => {
       'wi_abc12345 | P2 feature | open | Add rate limiting',
     );
     expect(result).toContain('wi_def67890 | P1 bug | active | Fix login bug');
+  });
+});
+
+describe('formatLowPriorityRejection', () => {
+  it('should format rejection with priority, title, type, and summary', () => {
+    const fields = createBaseIssueFields({
+      title: 'Fix typo in readme',
+      status: 'done',
+      priority: 5,
+      labels: ['docs'],
+      summary: 'Fixed a typo in the README file.',
+    });
+
+    const result = formatLowPriorityRejection(fields);
+
+    expect(result).toContain('Not tracked (P5');
+    expect(result).toContain('below threshold');
+    expect(result).toContain('"Fix typo in readme"');
+    expect(result).toContain('task');
+    expect(result).toContain('Fixed a typo in the README file.');
+    expect(result).toContain('provide more context');
   });
 });

@@ -16,11 +16,87 @@ import { extractFields, generateEmbedding, answerQuestion } from './ai';
 import {
   formatIssueConfirmation,
   formatIssueDetail,
+  formatLowPriorityRejection,
   computeThreadStats,
 } from './format';
-import { Issue } from './types';
+import { Issue, ThreadMessage } from './types';
 
 const THREAD_CONTEXT_LIMIT = 20;
+const MAX_TRACKABLE_PRIORITY = 4;
+
+function createVirtualMessage(content: string): ThreadMessage {
+  return {
+    id: 0,
+    issue_id: '',
+    timestamp: new Date().toISOString(),
+    role: 'assistant',
+    content,
+  };
+}
+
+async function handleNewIssue(message: string): Promise<string> {
+  const virtual_message = createVirtualMessage(message);
+
+  const fields = await extractFields([virtual_message]);
+  if (!fields) {
+    return 'Could not extract issue details. Please provide more context.';
+  }
+
+  if (fields.priority > MAX_TRACKABLE_PRIORITY) {
+    return formatLowPriorityRejection(fields);
+  }
+
+  const issue_id = generateIssueId();
+  await createIssue(issue_id);
+  await addThreadMessage(issue_id, 'assistant', message);
+  await updateIssueFields(issue_id, fields);
+
+  const embedding = await generateEmbedding(fields.summary);
+  if (embedding) {
+    await updateIssueEmbedding(issue_id, embedding);
+  }
+
+  const created = await getIssue(issue_id);
+  if (!created) {
+    return 'Failed to create issue';
+  }
+
+  const stats = computeThreadStats([virtual_message]);
+  return formatIssueConfirmation(created, 'Created', stats);
+}
+
+async function handleExistingIssue(
+  issue_id: string,
+  message: string,
+): Promise<string> {
+  const existing = await getIssue(issue_id);
+  if (!existing) {
+    return `Issue not found: ${issue_id}`;
+  }
+
+  await addThreadMessage(issue_id, 'assistant', message);
+
+  const messages = await getThreadMessages(issue_id, THREAD_CONTEXT_LIMIT);
+
+  const fields = await extractFields(messages, existing.summary);
+
+  if (fields) {
+    await updateIssueFields(issue_id, fields);
+
+    const embedding = await generateEmbedding(fields.summary);
+    if (embedding) {
+      await updateIssueEmbedding(issue_id, embedding);
+    }
+  }
+
+  const updated = await getIssue(issue_id);
+  if (!updated) {
+    return `Issue not found: ${issue_id}`;
+  }
+
+  const stats = await getThreadStats(issue_id);
+  return formatIssueConfirmation(updated, 'Updated', stats);
+}
 
 export async function handleTell(
   message: string,
@@ -28,44 +104,8 @@ export async function handleTell(
 ): Promise<string> {
   try {
     await ensureSchema();
-
-    const is_new = !issue_id;
-    if (!issue_id) {
-      issue_id = generateIssueId();
-      await createIssue(issue_id);
-    }
-
-    const existing = await getIssue(issue_id);
-    if (!existing) {
-      return `Issue not found: ${issue_id}`;
-    }
-
-    await addThreadMessage(issue_id, 'assistant', message);
-
-    const messages = await getThreadMessages(issue_id, THREAD_CONTEXT_LIMIT);
-
-    const fields = await extractFields(messages, existing.summary);
-
-    if (fields) {
-      await updateIssueFields(issue_id, fields);
-
-      const embedding = await generateEmbedding(fields.summary);
-      if (embedding) {
-        await updateIssueEmbedding(issue_id, embedding);
-      }
-    }
-
-    const updated = await getIssue(issue_id);
-    if (!updated) {
-      return `Issue not found: ${issue_id}`;
-    }
-
-    const stats = await getThreadStats(issue_id);
-    return formatIssueConfirmation(
-      updated,
-      is_new ? 'Created' : 'Updated',
-      stats,
-    );
+    if (!issue_id) return handleNewIssue(message);
+    return handleExistingIssue(issue_id, message);
   } catch (error) {
     console.error('handleTell failed:', error);
     return `Error processing message: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -98,9 +138,7 @@ export async function handleAsk(question: string): Promise<string> {
       return 'No issues found.';
     }
 
-    const stats_map = await getThreadStatsBatch(
-      all_issues.map((i) => i.id),
-    );
+    const stats_map = await getThreadStatsBatch(all_issues.map((i) => i.id));
     const answer = await answerQuestion(question, all_issues, stats_map);
     const matched = vector_results.length;
     const total_active = non_done.length;

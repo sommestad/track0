@@ -27,8 +27,9 @@ FIELD RULES:
 - priority (choose exactly one):
   * 1 = critical/urgent (blocking, security, production issue)
   * 2 = high (important, time-sensitive)
-  * 3 = normal (default when no urgency indicated)
+  * 3 = normal (default when no urgency indicated and the change has functional impact)
   * 4 = backlog (nice-to-have, future consideration)
+  * 5 = negligible impact (typo fix, formatting, import reorder, whitespace — purely mechanical with no behavioral change)
 
 - labels: 3-8 relevant tags (tech stack, area, or theme). Examples: "backend", "auth", "performance", "api", "frontend".
 
