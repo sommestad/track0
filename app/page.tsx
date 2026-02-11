@@ -1,4 +1,4 @@
-import { ensureSchema, getIssuesByStatus } from '@/lib/db';
+import { ensureSchema, getIssuesByStatus, getThreadStatsBatch } from '@/lib/db';
 import { STATUS_ORDER } from '@/lib/constants';
 import { ModeAwareIssueList } from '@/components/mode-aware-issue-list';
 import { LogoutButton } from './logout-button';
@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function Dashboard() {
   await ensureSchema();
   const issues = await getIssuesByStatus();
+  const thread_stats = await getThreadStatsBatch(issues.map((i) => i.id));
 
   const grouped = STATUS_ORDER.map((status) => ({
     status,
@@ -48,7 +49,7 @@ export default async function Dashboard() {
           </p>
         </div>
       ) : (
-        <ModeAwareIssueList grouped={grouped} />
+        <ModeAwareIssueList grouped={grouped} thread_stats={thread_stats} />
       )}
 
       <footer className="mt-16 text-center">
