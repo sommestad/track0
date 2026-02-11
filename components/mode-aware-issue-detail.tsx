@@ -153,7 +153,7 @@ export function ModeAwareIssueDetail({
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className="border-l-2 border-border bg-card/30 px-3 py-2"
+                className="rounded-md border border-border bg-card/30 px-3 py-2"
               >
                 <div className="flex items-center gap-2">
                   <span
