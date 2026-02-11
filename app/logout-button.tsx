@@ -7,7 +7,7 @@ export function LogoutButton(): React.ReactNode {
     <Button
       variant="ghost"
       size="sm"
-      className="text-xs text-muted-foreground hover:text-foreground"
+      className="text-xs text-muted-foreground hover:text-foreground dark:font-mono"
       onClick={() => {
         fetch('/api/auth', { method: 'DELETE' })
           .catch(() => {})

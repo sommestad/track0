@@ -1,6 +1,7 @@
 import type { Issue, ThreadMessage } from './types';
 
-export const STATUS_ORDER = ['active', 'open', 'done'] as const;
+export const STATUS_ORDER = ['open', 'active', 'done'] as const;
+export const LLM_STATUS_ORDER = ['active', 'open', 'done'] as const;
 
 export const STATUS_COLORS: Record<Issue['status'], string> = {
   active: 'text-[var(--green)]',

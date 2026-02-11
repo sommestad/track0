@@ -9,41 +9,67 @@ import {
 } from './types';
 import { formatCharCount } from './format';
 
-const EXTRACTION_PROMPT = `You are a structured data extractor for an issue tracker. Extract the current state from the conversation thread.
+const EXTRACTION_PROMPT = `<role>
+You are a structured data extractor for an issue tracker.
+</role>
 
-FIELD RULES:
-- title: Imperative form, under 120 characters. Focus on the action/outcome (e.g. "Add rate limiting to memory API", not "Investigating rate limiting options").
+<task>
+Read the conversation thread and extract the current state of the issue into structured fields. Always reflect the latest state of the conversation, not earlier messages that were superseded. If a current_summary is provided, treat it as prior state to be updated — the thread always takes precedence.
+</task>
 
-- type:
-  * "bug" = something broken, error, or not working as expected
-  * "feature" = new capability or enhancement
-  * "task" = everything else (refactors, investigations, documentation, etc.)
+<field_rules>
+<field name="title">
+Imperative form, under 120 characters. Focus on the action or outcome.
+Good: "Add rate limiting to memory API"
+Bad: "Investigating rate limiting options"
+</field>
 
-- status:
-  * "open" = not started, just discussed
-  * "active" = work mentioned, in progress, or partially complete
-  * "done" = explicitly completed, closed, merged, or marked as resolved
+<field name="type">
+- "bug" = something broken, error, or not working as expected
+- "feature" = new capability or enhancement
+- "task" = everything else (refactors, investigations, documentation)
+</field>
 
-- priority (choose exactly one):
-  * 1 = critical/urgent (blocking, security, production issue)
-  * 2 = high (important, time-sensitive)
-  * 3 = normal (default when no urgency indicated and the change has functional impact)
-  * 4 = backlog (nice-to-have, future consideration)
-  * 5 = negligible impact (typo fix, formatting, import reorder, whitespace — purely mechanical with no behavioral change)
+<field name="status">
+- "open" = not started, just discussed
+- "active" = work mentioned, in progress, or partially complete
+- "done" = explicitly completed, closed, merged, or marked as resolved
+</field>
 
-- labels: 3-8 relevant tags (tech stack, area, or theme). Examples: "backend", "auth", "performance", "api", "frontend".
+<field name="priority">
+Choose exactly one:
+- 1 = critical/urgent (blocking, security, production issue)
+- 2 = high (important, time-sensitive)
+- 3 = normal (default when no urgency indicated and the change has functional impact)
+- 4 = backlog (nice-to-have, future consideration)
+- 5 = negligible impact (typo fix, formatting, import reorder, whitespace — purely mechanical with no behavioral change)
+</field>
 
-- summary: 2-3 sentences answering: What is this issue about? What's the current situation? What happens next? Focus on decisions made and actionable next steps.`;
+<field name="labels">
+3-8 relevant tags. Use lowercase, single-word or hyphenated terms. Examples: "backend", "auth", "rate-limiting", "api", "frontend".
+</field>
 
-const QA_PROMPT = `You are an issue tracker assistant. Answer questions using only the issue data below.
+<field name="summary">
+2-3 sentences covering: (1) what this issue is about, (2) current status and decisions made, (3) concrete next steps if any were discussed. Do not speculate about next steps that were not mentioned.
+</field>
+</field_rules>`;
 
-GUIDELINES:
+const QA_PROMPT = `<role>
+You are an issue tracker assistant.
+</role>
+
+<task>
+Answer the user's question using only the issue data provided below. Be direct and specific. Avoid preambles — just answer.
+</task>
+
+<guidelines>
 - Reference issues by ID in parentheses, e.g. "The auth refactor (wi_a3Kx) is in progress"
 - Give complete but focused answers — include relevant context without unnecessary detail
 - When asked about priority or "what's next", recommend priority 1-2 issues first, then "open" over "active"
 - If multiple issues match, list up to 3 most relevant
 - If no issues match, say so clearly and suggest related issues if any exist
-- Only reference issues listed in the ISSUES section. Never infer issues not present in the data.`;
+- Only reference issues listed below. Never infer issues not present in the data.
+</guidelines>`;
 
 function formatThreadForExtraction(messages: ThreadMessage[]): string {
   return messages
@@ -75,15 +101,14 @@ export async function extractFields(
   currentSummary?: string,
 ): Promise<IssueFields | null> {
   const threadContext = formatThreadForExtraction(messages);
-  const summaryContext = currentSummary
-    ? `\nCURRENT SUMMARY: ${currentSummary}\n`
-    : '';
-
   try {
     const result = await generateText({
-      model: gateway('openai/gpt-5-2'),
-      providerOptions: { openai: { reasoningEffort: 'none' } },
-      prompt: `${EXTRACTION_PROMPT}\n${summaryContext}\nTHREAD:\n${threadContext}`,
+      model: gateway('anthropic/claude-sonnet-4.5'),
+      prompt: `${EXTRACTION_PROMPT}
+${currentSummary ? `\n<current_summary>\n${currentSummary}\n</current_summary>` : ''}
+<thread>
+${threadContext}
+</thread>`,
       output: Output.object({ schema: IssueFieldsSchema }),
     });
     return result.output;
@@ -120,9 +145,8 @@ export async function answerQuestion(
 
   try {
     const result = await generateText({
-      model: gateway('openai/gpt-5-2'),
-      providerOptions: { openai: { reasoningEffort: 'none' } },
-      prompt: `${QA_PROMPT}\n\nISSUES:\n${issueContext}\n\nQUESTION: ${question}`,
+      model: gateway('anthropic/claude-sonnet-4.5'),
+      prompt: `${QA_PROMPT}\n\n<issues>\n${issueContext}\n</issues>\n\n<question>\n${question}\n</question>`,
     });
     return result.text;
   } catch (error) {

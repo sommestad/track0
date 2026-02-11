@@ -6,19 +6,21 @@ const handler = createMcpHandler(
   (server) => {
     server.tool(
       'track0_tell',
-      'Tell the tracker something. Creates a new issue or updates an existing one. Use track0_find first to check for duplicates before creating.',
+      'Tell the tracker about work being done, decisions made, or problems found. Creates a new issue when no issue_id is provided, or appends to an existing issue thread when an issue_id is given. The tracker automatically extracts structured fields (title, type, status, priority, labels, summary) from your natural language message. Before creating a new issue, always use track0_find first to check for existing duplicates. Returns a confirmation with the issue ID and extracted fields.',
       {
         message: z
           .string()
           .min(1)
           .max(10000)
-          .describe('Natural language message about an issue'),
+          .describe(
+            'Natural language message describing work done, a decision made, a problem found, or a status update for an issue',
+          ),
         issue_id: z
           .string()
           .max(20)
           .optional()
           .describe(
-            'Existing issue ID to update (e.g. wi_abc123). Omit to create new.',
+            'Existing issue ID to update (e.g. wi_abc123). Omit to create a new issue. Use track0_find first to check for duplicates.',
           ),
       },
       async ({ message, issue_id }) => {
@@ -29,13 +31,15 @@ const handler = createMcpHandler(
 
     server.tool(
       'track0_ask',
-      'Ask a question about your issues. Uses semantic search to find relevant items.',
+      'Ask a natural language question about tracked issues and get an AI-generated answer grounded in actual issue data. Combines semantic vector search with issue lookup to find relevant items, then synthesizes an answer referencing specific issue IDs. Use this for analysis, summaries, prioritization advice, or questions like "what should I work on next?" or "what bugs are open?". Only references issues that actually exist in the tracker.',
       {
         question: z
           .string()
           .min(1)
           .max(2000)
-          .describe('Natural language question'),
+          .describe(
+            'Natural language question about your tracked issues, e.g. "what bugs are open?" or "what should I work on next?"',
+          ),
       },
       async ({ question }) => {
         const result = await handleAsk(question);
@@ -45,19 +49,21 @@ const handler = createMcpHandler(
 
     server.tool(
       'track0_find',
-      'Find existing issues similar to a message. Use before track0_tell to avoid duplicates.',
+      'Find existing issues that are semantically similar to a given message using vector similarity search. Use this tool before calling track0_tell to check whether a matching issue already exists, avoiding duplicate entries. Returns up to the specified limit of matching issues ranked by similarity percentage, each with issue ID, priority, type, status, title, and summary. If no similar issues are found, it is safe to create a new one with track0_tell.',
       {
         message: z
           .string()
           .min(1)
           .max(10000)
-          .describe('Natural language message to find similar issues for'),
+          .describe(
+            'Natural language description of the work or problem to search for similar existing issues',
+          ),
         limit: z
           .number()
           .min(1)
           .max(20)
           .optional()
-          .describe('Max results to return (default 5)'),
+          .describe('Maximum number of similar issues to return (default 5, max 20)'),
       },
       async ({ message, limit }) => {
         const result = await handleFind(message, limit);
@@ -67,9 +73,9 @@ const handler = createMcpHandler(
 
     server.tool(
       'track0_get',
-      'Get full details and conversation thread for one issue.',
+      'Retrieve the complete details and full conversation thread for a single issue by its ID. Returns the issue title, type, status, priority, labels, summary, timestamps, and the entire message thread. Use this when you need to understand the full context and history of a specific issue before updating it, or when the user asks for details about a particular issue.',
       {
-        id: z.string().max(20).describe('Issue ID (e.g. wi_a3Kx)'),
+        id: z.string().max(20).describe('Issue ID to retrieve (e.g. wi_a3Kx)'),
       },
       async ({ id }) => {
         const result = await handleGet(id);
