@@ -24,10 +24,7 @@ export function IssueCard({ issue }: IssueCardProps): React.ReactNode {
           {issue.summary}
         </p>
       )}
-      <p
-        className="text-xs text-muted-foreground mt-1"
-        style={{ opacity }}
-      >
+      <p className="text-xs text-muted-foreground mt-1" style={{ opacity }}>
         {timeAgo(issue.updated_at)}
       </p>
     </Link>
