@@ -131,7 +131,7 @@ export function ModeAwareIssueList({
           {issues.length === 0 ? (
             <p className="text-xs text-muted-foreground px-1">No issues</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {issues.map((issue) => (
                 <IssueCard key={issue.id} issue={issue} />
               ))}
