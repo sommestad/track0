@@ -9,7 +9,8 @@ import {
   STATUS_BORDERS,
   LLM_STATUS_ORDER,
 } from '@/lib/constants';
-import type { Issue } from '@/lib/types';
+import type { Issue, ThreadStats } from '@/lib/types';
+import { formatCharCount } from '@/lib/format';
 
 const emptySubscribe = () => () => {};
 const getSnapshot = () => true;
@@ -26,9 +27,21 @@ interface GroupedIssues {
 
 interface ModeAwareIssueListProps {
   grouped: GroupedIssues[];
+  thread_stats: Map<string, ThreadStats>;
 }
 
-function LlmIssueLine({ issue }: { issue: Issue }): React.ReactNode {
+function LlmIssueLine({
+  issue,
+  stats,
+}: {
+  issue: Issue;
+  stats: ThreadStats | undefined;
+}): React.ReactNode {
+  const updated = new Date(issue.updated_at).toISOString().slice(0, 10);
+  const thread_info = stats
+    ? `${stats.message_count} msg${stats.message_count !== 1 ? 's' : ''} ${formatCharCount(stats.total_chars)}`
+    : undefined;
+
   return (
     <Link
       href={`/issue/${issue.id}`}
@@ -43,6 +56,14 @@ function LlmIssueLine({ issue }: { issue: Issue }): React.ReactNode {
       <span className="text-[var(--green)]">{issue.status}</span>
       <span className="text-muted-foreground"> | </span>
       <span className="font-bold text-foreground">{issue.title}</span>
+      <span className="text-muted-foreground"> | </span>
+      <span className="text-muted-foreground">updated {updated}</span>
+      {thread_info && (
+        <>
+          <span className="text-muted-foreground"> | </span>
+          <span className="text-muted-foreground">{thread_info}</span>
+        </>
+      )}
       <br />
       <span className="text-muted-foreground">
         {'  '}
@@ -54,6 +75,7 @@ function LlmIssueLine({ issue }: { issue: Issue }): React.ReactNode {
 
 export function ModeAwareIssueList({
   grouped,
+  thread_stats,
 }: ModeAwareIssueListProps): React.ReactNode {
   const { theme } = useTheme();
   const mounted = useMounted();
@@ -77,7 +99,11 @@ export function ModeAwareIssueList({
             </div>
             <div className="space-y-2">
               {issues.map((issue) => (
-                <LlmIssueLine key={issue.id} issue={issue} />
+                <LlmIssueLine
+                  key={issue.id}
+                  issue={issue}
+                  stats={thread_stats.get(issue.id)}
+                />
               ))}
             </div>
           </section>
