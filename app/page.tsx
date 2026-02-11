@@ -1,6 +1,6 @@
 import { ensureSchema, getIssuesByStatus } from '@/lib/db';
-import { STATUS_ORDER, STATUS_COLORS, STATUS_BORDERS } from '@/lib/constants';
-import { IssueCard } from '@/components/issue-card';
+import { STATUS_ORDER } from '@/lib/constants';
+import { ModeAwareIssueList } from '@/components/mode-aware-issue-list';
 import { LogoutButton } from './logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -23,7 +23,7 @@ export default async function Dashboard() {
   return (
     <main className="max-w-3xl mx-auto px-4 py-6">
       <div className="flex items-baseline justify-between mb-4">
-        <h1 className="text-base font-bold">track0</h1>
+        <h1 className="text-base font-bold dark:font-mono">track0</h1>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
             {open_count} open / {total} total
@@ -45,24 +45,7 @@ export default async function Dashboard() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {grouped.map(({ status, issues }) => (
-            <section key={status}>
-              <div className={`border-l-2 pl-2 mb-2 ${STATUS_BORDERS[status]}`}>
-                <h2
-                  className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status]}`}
-                >
-                  {status} ({issues.length})
-                </h2>
-              </div>
-              <div className="space-y-1">
-                {issues.map((issue) => (
-                  <IssueCard key={issue.id} issue={issue} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <ModeAwareIssueList grouped={grouped} />
       )}
     </main>
   );
