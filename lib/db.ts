@@ -218,9 +218,7 @@ export async function vectorSearch(
   return rows.map((row) => parseRow(row) as Issue & { similarity: number });
 }
 
-export async function getThreadStats(
-  issue_id: string,
-): Promise<ThreadStats> {
+export async function getThreadStats(issue_id: string): Promise<ThreadStats> {
   const rows = await sql()`
     SELECT COUNT(*)::int AS message_count,
            COALESCE(SUM(LENGTH(content)), 0)::int AS total_chars

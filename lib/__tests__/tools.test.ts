@@ -24,6 +24,7 @@ vi.mock('../ai', () => ({
 vi.mock('../format', () => ({
   formatIssueConfirmation: vi.fn(),
   formatIssueDetail: vi.fn(),
+  formatLowPriorityRejection: vi.fn(),
   computeThreadStats: vi.fn(),
 }));
 
@@ -45,10 +46,12 @@ import { extractFields, generateEmbedding, answerQuestion } from '../ai';
 import {
   formatIssueConfirmation,
   formatIssueDetail,
+  formatLowPriorityRejection,
   computeThreadStats,
 } from '../format';
 import { handleTell, handleAsk, handleGet } from '../tools';
 import { Issue } from '../types';
+import { createBaseIssue, createBaseIssueFields } from '../test-util';
 
 const mockEnsureSchema = vi.mocked(ensureSchema);
 const mockGenerateIssueId = vi.mocked(generateIssueId);
@@ -67,19 +70,15 @@ const mockGenerateEmbedding = vi.mocked(generateEmbedding);
 const mockAnswerQuestion = vi.mocked(answerQuestion);
 const mockFormatIssueConfirmation = vi.mocked(formatIssueConfirmation);
 const mockFormatIssueDetail = vi.mocked(formatIssueDetail);
+const mockFormatLowPriorityRejection = vi.mocked(formatLowPriorityRejection);
+const mockComputeThreadStats = vi.mocked(computeThreadStats);
 
-const sampleIssue: Issue = {
-  id: 'wi_test1234',
-  title: 'Test issue',
-  type: 'task',
-  status: 'open',
-  priority: 3,
-  labels: [],
-  summary: 'A test issue.',
-  embedding: null,
-  created_at: '2025-01-01T00:00:00Z',
-  updated_at: '2025-01-01T00:00:00Z',
-};
+const sampleIssue = createBaseIssue();
+
+function withSuppressedConsoleError<T>(fn: () => Promise<T>): Promise<T> {
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  return fn().finally(() => spy.mockRestore());
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -91,39 +90,79 @@ describe('handleTell', () => {
     beforeEach(() => {
       mockGenerateIssueId.mockReturnValue('wi_new12345');
       mockCreateIssue.mockResolvedValue(undefined);
-      mockGetIssue.mockResolvedValue({ ...sampleIssue, id: 'wi_new12345' });
+      mockGetIssue.mockResolvedValue(createBaseIssue({ id: 'wi_new12345' }));
       mockAddThreadMessage.mockResolvedValue(undefined);
-      mockGetThreadMessages.mockResolvedValue([]);
-      mockExtractFields.mockResolvedValue({
-        title: 'New issue',
-        type: 'task',
-        status: 'open',
-        priority: 3,
-        labels: [],
-        summary: 'New issue summary.',
-      });
+      mockExtractFields.mockResolvedValue(createBaseIssueFields());
       mockGenerateEmbedding.mockResolvedValue([0.1, 0.2]);
       mockUpdateIssueFields.mockResolvedValue(undefined);
       mockUpdateIssueEmbedding.mockResolvedValue(undefined);
-      mockGetThreadStats.mockResolvedValue({
+      mockComputeThreadStats.mockReturnValue({
         message_count: 1,
         total_chars: 80,
       });
       mockFormatIssueConfirmation.mockReturnValue('Created wi_new12345');
     });
 
-    it('should create a new issue and return confirmation', async () => {
+    it('should extract before creating, then create and return confirmation', async () => {
       const result = await handleTell('Create a new task');
 
+      expect(mockExtractFields).toHaveBeenCalledOnce();
       expect(mockGenerateIssueId).toHaveBeenCalledOnce();
       expect(mockCreateIssue).toHaveBeenCalledWith('wi_new12345');
-      expect(mockGetThreadStats).toHaveBeenCalledWith('wi_new12345');
+      expect(mockComputeThreadStats).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ content: 'Create a new task' }),
+        ]),
+      );
       expect(mockFormatIssueConfirmation).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'wi_new12345' }),
         'Created',
         { message_count: 1, total_chars: 80 },
       );
       expect(result).toBe('Created wi_new12345');
+    });
+  });
+
+  describe('with trivial priority (P5)', () => {
+    beforeEach(() => {
+      mockExtractFields.mockResolvedValue(
+        createBaseIssueFields({
+          title: 'Fix typo in readme',
+          status: 'done',
+          priority: 5,
+          labels: ['docs'],
+          summary: 'Fixed a typo in the README.',
+        }),
+      );
+      mockFormatLowPriorityRejection.mockReturnValue(
+        'Not tracked (P5 — below threshold): "Fix typo in readme"',
+      );
+    });
+
+    it('should not create an issue and return rejection', async () => {
+      const result = await handleTell('Fixed a typo in the readme');
+
+      expect(mockCreateIssue).not.toHaveBeenCalled();
+      expect(mockGenerateIssueId).not.toHaveBeenCalled();
+      expect(mockAddThreadMessage).not.toHaveBeenCalled();
+      expect(mockFormatLowPriorityRejection).toHaveBeenCalledWith(
+        expect.objectContaining({ priority: 5 }),
+      );
+      expect(result).toContain('Not tracked');
+    });
+  });
+
+  describe('with null extraction for new issue', () => {
+    beforeEach(() => {
+      mockExtractFields.mockResolvedValue(null);
+    });
+
+    it('should not create an issue and return extraction error', async () => {
+      const result = await handleTell('...');
+
+      expect(mockCreateIssue).not.toHaveBeenCalled();
+      expect(mockGenerateIssueId).not.toHaveBeenCalled();
+      expect(result).toContain('Could not extract');
     });
   });
 
@@ -166,29 +205,25 @@ describe('handleTell', () => {
   });
 
   describe('on db failure', () => {
-    it('should return error string', async () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      mockEnsureSchema.mockRejectedValue(new Error('DB down'));
+    it('should return error string', () =>
+      withSuppressedConsoleError(async () => {
+        mockEnsureSchema.mockRejectedValue(new Error('DB down'));
 
-      const result = await handleTell('test message');
+        const result = await handleTell('test message');
 
-      expect(result).toContain('Error processing message');
-      expect(result).toContain('DB down');
-      consoleSpy.mockRestore();
-    });
+        expect(result).toContain('Error processing message');
+        expect(result).toContain('DB down');
+      }));
   });
 });
 
 describe('handleAsk', () => {
   describe('with results', () => {
     it('should combine non-done and vector results and prefix with scope', async () => {
-      const issueA = { ...sampleIssue, id: 'wi_aaaa' };
-      const issueB = { ...sampleIssue, id: 'wi_bbbb' };
+      const issueA = createBaseIssue({ id: 'wi_aaaa' });
+      const issueB = createBaseIssue({ id: 'wi_bbbb' });
       const issueC = {
-        ...sampleIssue,
-        id: 'wi_aaaa',
+        ...createBaseIssue({ id: 'wi_aaaa' }),
         similarity: 0.9,
       };
 
@@ -232,18 +267,15 @@ describe('handleAsk', () => {
   });
 
   describe('on failure', () => {
-    it('should return error string', async () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      mockEnsureSchema.mockRejectedValue(new Error('connection refused'));
+    it('should return error string', () =>
+      withSuppressedConsoleError(async () => {
+        mockEnsureSchema.mockRejectedValue(new Error('connection refused'));
 
-      const result = await handleAsk('test');
+        const result = await handleAsk('test');
 
-      expect(result).toContain('Error answering question');
-      expect(result).toContain('connection refused');
-      consoleSpy.mockRestore();
-    });
+        expect(result).toContain('Error answering question');
+        expect(result).toContain('connection refused');
+      }));
   });
 });
 
@@ -272,17 +304,14 @@ describe('handleGet', () => {
   });
 
   describe('on failure', () => {
-    it('should return error string', async () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      mockEnsureSchema.mockRejectedValue(new Error('timeout'));
+    it('should return error string', () =>
+      withSuppressedConsoleError(async () => {
+        mockEnsureSchema.mockRejectedValue(new Error('timeout'));
 
-      const result = await handleGet('wi_test1234');
+        const result = await handleGet('wi_test1234');
 
-      expect(result).toContain('Error retrieving issue');
-      expect(result).toContain('timeout');
-      consoleSpy.mockRestore();
-    });
+        expect(result).toContain('Error retrieving issue');
+        expect(result).toContain('timeout');
+      }));
   });
 });
