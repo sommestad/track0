@@ -4,6 +4,7 @@ import {
   formatIssueDetail,
   formatIssueList,
   formatLowPriorityRejection,
+  formatFindResults,
   computeThreadStats,
   formatThreadStats,
   formatCharCount,
@@ -251,5 +252,60 @@ describe('formatLowPriorityRejection', () => {
     expect(result).toContain('task');
     expect(result).toContain('Fixed a typo in the README file.');
     expect(result).toContain('provide more context');
+  });
+});
+
+describe('formatFindResults', () => {
+  it('should format results with similarity, fields, and summary', () => {
+    const results = [
+      {
+        ...createBaseIssue({
+          id: 'wi_abc12345',
+          title: 'Add rate limiting',
+          type: 'feature',
+          priority: 2,
+          status: 'open',
+          summary: 'Need rate limiting on the memory API.',
+        }),
+        similarity: 0.92,
+      },
+      {
+        ...createBaseIssue({
+          id: 'wi_def67890',
+          title: 'Fix login bug',
+          type: 'bug',
+          priority: 1,
+          status: 'active',
+          summary: 'Login fails on mobile.',
+        }),
+        similarity: 0.78,
+      },
+    ];
+
+    const result = formatFindResults(results);
+
+    expect(result).toContain('wi_abc12345 (92%)');
+    expect(result).toContain('P2 feature | open | Add rate limiting');
+    expect(result).toContain('Need rate limiting on the memory API.');
+    expect(result).toContain('wi_def67890 (78%)');
+    expect(result).toContain('P1 bug | active | Fix login bug');
+    expect(result).toContain('Login fails on mobile.');
+  });
+
+  it('should handle empty summary', () => {
+    const results = [
+      {
+        ...createBaseIssue({
+          id: 'wi_nosummary',
+          title: 'No summary issue',
+          summary: '',
+        }),
+        similarity: 0.85,
+      },
+    ];
+
+    const result = formatFindResults(results);
+
+    expect(result).toContain('No summary yet.');
   });
 });

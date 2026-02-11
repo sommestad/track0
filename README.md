@@ -2,15 +2,16 @@
 
 AI-native issue tracker. Issues are conversations, not forms.
 
-Claude Code talks to it via 3 MCP tools. A server-side LLM derives structured state from the thread. Humans get a read-only dashboard.
+Claude Code talks to it via 4 MCP tools. A server-side LLM derives structured state from the thread. Humans get a read-only dashboard.
 
 ## Tools
 
-| Tool          | Purpose                                                                       |
-| ------------- | ----------------------------------------------------------------------------- |
-| `track0_tell` | Tell the tracker something. Creates or updates issues from natural language.  |
-| `track0_ask`  | Ask a question. Server-side LLM answers based on stored data + vector search. |
-| `track0_get`  | Get full thread + derived state for one issue.                                |
+| Tool          | Purpose                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `track0_tell` | Tell the tracker something. Creates or updates issues from natural language.             |
+| `track0_find` | Find existing issues similar to a message. Use before `track0_tell` to avoid duplicates. |
+| `track0_ask`  | Ask a question. Server-side LLM answers based on stored data + vector search.            |
+| `track0_get`  | Get full thread + derived state for one issue.                                           |
 
 ## Deploy
 
@@ -47,9 +48,13 @@ Add a guideline to your project's `CLAUDE.md` so the coding agent logs significa
 ```markdown
 ## Work Tracking
 
-When starting work that looks like a significant feature, meaningful change, or non-trivial bug fix,
-use `mcp__track0__track0_tell` to log what's being worked on. Skip this for small tweaks, formatting,
-or minor refactors.
+When starting work that looks like a significant feature, meaningful change, or non-trivial bug fix:
+
+1. Use `mcp__track0__track0_find` to check if a similar issue already exists.
+2. If a match exists, use `mcp__track0__track0_tell` with that `issue_id` to update it.
+3. If no match, use `mcp__track0__track0_tell` without an `issue_id` to create a new issue.
+
+Skip tracking for small tweaks, formatting, or minor refactors.
 
 When committing, pushing, or creating a PR for significant work, also update track0 with what was
 done — include a summary of the changes, not just "committed" or "PR created".
