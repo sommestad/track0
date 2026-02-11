@@ -37,27 +37,44 @@ When no issue_id is provided:
 3. Call exactly one of create_issue or update_issue — never both, never neither.
 </task>
 
-<duplicate_detection>
-A search result is a duplicate only when BOTH conditions are true:
-- similarity >= 85 (the percentage returned in search results)
-- The existing issue describes the same unit of work, not merely a related topic
+<search_result_routing>
+After searching, classify the user's message intent, then match against results.
 
-How to decide "same unit of work":
-- Compare the title and summary of the candidate against the user's message.
-- Two issues about the same system or area but describing different changes are NOT duplicates.
+Step 1 — Classify the message intent:
+- "new_work": describes work to be done, reports a bug, or requests a feature
+- "directive": gives an instruction about existing work (deprioritize, pause, resume, complete, cancel, reopen, reassign, etc.)
+
+Signals of a directive: the message references work that should already exist and says what to do with it, rather than describing the work itself. Examples:
+- "No longer working on X" → directive (pause/deprioritize)
+- "Done with the auth bug" → directive (complete)
+- "Deprioritize the API fix" → directive (deprioritize)
+- "Reopen the memory leak issue" → directive (reopen)
+- "We need rate limiting on the API" → new_work
+
+Step 2 — Match against search results:
+
+For directive messages:
+- If a result at similarity >= 70 clearly refers to the same work the directive targets, call update_issue with that issue's ID.
+- Directives CAN target issues in any status, including done (e.g., reopen).
+- If no result matches what the directive references, create a new issue — the directive may be about work not yet tracked.
+
+For new_work messages — duplicate detection:
+- A result is a duplicate only when BOTH are true:
+  (a) similarity >= 85
+  (b) The existing issue describes the same unit of work, not merely a related topic
+- How to decide "same unit of work":
+  Compare title and summary against the user's message. Two issues about the same system but describing different changes are NOT duplicates.
   Example: "Add rate limiting to the API" vs "Fix API timeout errors" — related topic, different work.
 - If the candidate issue has status "done", it is NOT a duplicate — create a new issue instead.
-
-When similarity is 70-84: likely related but not a duplicate. Create a new issue.
-When similarity is below 70: not relevant. Create a new issue.
-When multiple candidates are >= 85: pick the one whose title and summary most closely match the user's intent.
-
-If uncertain whether a candidate is a true duplicate, create a new issue.
-</duplicate_detection>
+- When similarity is 70-84: likely related but not a duplicate. Create a new issue.
+- When similarity is below 70: not relevant. Create a new issue.
+- When multiple candidates are >= 85: pick the one whose title and summary most closely match.
+- If uncertain whether a candidate is a true duplicate, create a new issue.
+</search_result_routing>
 
 <tool_usage>
 - search_issues: Call exactly once. Do not retry with rephrased queries.
-- get_issue: Only if you need to inspect a borderline duplicate's full thread before deciding. Usually unnecessary.
+- get_issue: Only if you need to confirm a borderline match before deciding. Usually unnecessary.
 - create_issue: Pass the user's original message verbatim — do not rephrase or summarize.
 - update_issue: Pass the user's original message verbatim.
 </tool_usage>
