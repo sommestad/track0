@@ -157,7 +157,9 @@ describe('formatIssueDetail', () => {
 
     expect(result).toContain('wi_abc12345: "Add rate limiting"');
     expect(result).toContain('P2 feature | open | backend, api');
-    expect(result).toContain('Created 2025-01-01 | Updated 2025-01-15');
+    expect(result).toContain(
+      'Created 2025-01-01T00:00:00.000Z | Updated 2025-01-15T00:00:00.000Z',
+    );
     expect(result).toContain('Need rate limiting on the memory API.');
   });
 
@@ -198,10 +200,10 @@ describe('formatIssueDetail', () => {
     const result = formatIssueDetail(baseIssue, messages);
 
     expect(result).toContain('THREAD (2 msgs,');
-    expect(result).toContain('2025-01-01 10:30');
+    expect(result).toContain('2025-01-01T10:30:00.000Z');
     expect(result).toContain('assistant');
     expect(result).toContain('Working on rate limiting now.');
-    expect(result).toContain('2025-01-15 09:00');
+    expect(result).toContain('2025-01-15T09:00:00.000Z');
     expect(result).toContain('Proceed with implementation.');
   });
 });

@@ -118,10 +118,7 @@ export function ModeAwareIssueDetail({
           </Badge>
           <Badge variant="secondary">P{issue.priority}</Badge>
           <div className="ml-auto">
-            <StatusSelector
-              issueId={issue.id}
-              currentStatus={issue.status}
-            />
+            <StatusSelector issueId={issue.id} currentStatus={issue.status} />
           </div>
         </div>
 

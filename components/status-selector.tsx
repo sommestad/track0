@@ -29,7 +29,10 @@ export function StatusSelector({
     <Tabs
       value={currentStatus}
       onValueChange={handleChange}
-      className={cn('gap-0 flex-row h-7', isPending && 'opacity-50 pointer-events-none')}
+      className={cn(
+        'gap-0 flex-row h-7',
+        isPending && 'opacity-50 pointer-events-none',
+      )}
     >
       <TabsList className="[&]:h-auto gap-0 rounded-md p-1">
         {STATUSES.map((status) => (

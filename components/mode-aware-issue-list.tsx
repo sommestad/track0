@@ -37,7 +37,7 @@ function LlmIssueLine({
   issue: Issue;
   stats: ThreadStats | undefined;
 }): React.ReactNode {
-  const updated = new Date(issue.updated_at).toISOString().slice(0, 10);
+  const updated = new Date(issue.updated_at).toISOString();
   const thread_info = stats
     ? `${stats.message_count} msg${stats.message_count !== 1 ? 's' : ''} ${formatCharCount(stats.total_chars)}`
     : undefined;
