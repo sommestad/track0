@@ -22,7 +22,7 @@ vi.mock('@ai-sdk/gateway', () => ({
 }));
 
 import { generateText, embed } from 'ai';
-import { extractFields, generateEmbedding, answerQuestion } from '../ai';
+import { extractFields, generateEmbedding } from '../ai';
 import { ThreadMessage } from '../types';
 
 const mockGenerateText = vi.mocked(generateText);
@@ -69,7 +69,21 @@ describe('extractFields', () => {
         message: 'could not generate object',
         text: '',
         response: { id: '', modelId: '', timestamp: new Date() },
-        usage: { promptTokens: 0, completionTokens: 0 },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          inputTokenDetails: {
+            noCacheTokens: undefined,
+            cacheReadTokens: undefined,
+            cacheWriteTokens: undefined,
+          },
+          outputTokenDetails: {
+            textTokens: undefined,
+            reasoningTokens: undefined,
+          },
+        },
+        finishReason: 'stop',
       }),
     );
 
@@ -115,28 +129,6 @@ describe('generateEmbedding', () => {
       'generateEmbedding failed:',
       expect.any(Error),
     );
-    consoleSpy.mockRestore();
-  });
-});
-
-describe('answerQuestion', () => {
-  it('should return text on success', async () => {
-    mockGenerateText.mockResolvedValue({
-      text: 'The top priority is wi_abc.',
-    } as never);
-
-    const result = await answerQuestion('What is top priority?', []);
-
-    expect(result).toBe('The top priority is wi_abc.');
-  });
-
-  it('should return friendly error string on failure', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockGenerateText.mockRejectedValue(new Error('API down'));
-
-    const result = await answerQuestion('What is top priority?', []);
-
-    expect(result).toBe('Failed to generate answer. Please try again.');
     consoleSpy.mockRestore();
   });
 });
