@@ -2,8 +2,8 @@
 
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
-import { Button } from '@/components/ui/button';
 import { Terminal, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const emptySubscribe = () => () => {};
 const getSnapshot = () => true;
@@ -17,26 +17,34 @@ export function ThemeToggle(): React.ReactNode {
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
 
-  if (!mounted) {
-    return (
-      <Button variant="ghost" size="icon-xs" disabled>
-        <Terminal className="size-3" />
-      </Button>
-    );
-  }
+  const current = mounted ? theme : 'llm';
 
   return (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      onClick={() => setTheme(theme === 'llm' ? 'human' : 'llm')}
-      className="text-muted-foreground hover:text-foreground"
-    >
-      {theme === 'llm' ? (
-        <Eye className="size-3" />
-      ) : (
-        <Terminal className="size-3" />
-      )}
-    </Button>
+    <div className="inline-flex items-center rounded-[6px] bg-muted/50 p-[3px] gap-[2px]">
+      <button
+        onClick={() => setTheme('llm')}
+        disabled={!mounted}
+        className={cn(
+          'inline-flex items-center justify-center rounded-[4px] p-[6px] transition-colors',
+          current === 'llm'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        <Terminal className="size-[14px]" />
+      </button>
+      <button
+        onClick={() => setTheme('human')}
+        disabled={!mounted}
+        className={cn(
+          'inline-flex items-center justify-center rounded-[4px] p-[6px] transition-colors',
+          current === 'human'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        <Eye className="size-[14px]" />
+      </button>
+    </div>
   );
 }

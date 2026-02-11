@@ -13,7 +13,7 @@ export default async function Dashboard() {
   const grouped = STATUS_ORDER.map((status) => ({
     status,
     issues: issues.filter((i) => i.status === status),
-  })).filter((g) => g.issues.length > 0);
+  }));
 
   const total = issues.length;
   const open_count = issues.filter(
@@ -21,19 +21,22 @@ export default async function Dashboard() {
   ).length;
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-6">
+    <main className="max-w-6xl dark:max-w-3xl mx-auto px-4 py-6">
       <div className="flex items-baseline justify-between mb-4">
         <h1 className="text-base font-bold dark:font-mono">track0</h1>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">
-            {open_count} open / {total} total
+          <span className="text-xs dark:font-mono text-[var(--yellow)]">
+            {open_count} open
+          </span>
+          <span className="text-xs text-muted-foreground">&middot;</span>
+          <span className="text-xs dark:font-mono text-muted-foreground">
+            {total} total
           </span>
           <ThemeToggle />
-          <LogoutButton />
         </div>
       </div>
 
-      {grouped.length === 0 ? (
+      {total === 0 ? (
         <div className="text-center text-muted-foreground py-12">
           <p className="text-sm mb-2">No issues yet</p>
           <p className="text-xs">
@@ -47,6 +50,10 @@ export default async function Dashboard() {
       ) : (
         <ModeAwareIssueList grouped={grouped} />
       )}
+
+      <footer className="mt-16 text-center">
+        <LogoutButton />
+      </footer>
     </main>
   );
 }

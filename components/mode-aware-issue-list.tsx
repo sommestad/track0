@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
 import { IssueCard } from '@/components/issue-card';
-import { STATUS_COLORS, STATUS_BORDERS } from '@/lib/constants';
+import {
+  STATUS_COLORS,
+  STATUS_BORDERS,
+  LLM_STATUS_ORDER,
+} from '@/lib/constants';
 import type { Issue } from '@/lib/types';
 
 const emptySubscribe = () => () => {};
@@ -57,9 +61,16 @@ export function ModeAwareIssueList({
   const isLlm = !mounted || theme === 'llm';
 
   if (isLlm) {
+    const nonEmpty = [...grouped]
+      .sort(
+        (a, b) =>
+          LLM_STATUS_ORDER.indexOf(a.status) -
+          LLM_STATUS_ORDER.indexOf(b.status),
+      )
+      .filter((g) => g.issues.length > 0);
     return (
       <div className="space-y-5 text-xs font-mono">
-        {grouped.map(({ status, issues }) => (
+        {nonEmpty.map(({ status, issues }) => (
           <section key={status}>
             <div className="text-muted-foreground mb-2">
               --- {status} ({issues.length}) ---
@@ -76,11 +87,14 @@ export function ModeAwareIssueList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
       {grouped.map(({ status, issues }) => (
-        <section key={status}>
+        <section
+          key={status}
+          className="bg-muted/30 rounded-lg p-3 min-h-[120px]"
+        >
           <div
-            className={`border-l-2 pl-2 mb-2 ${STATUS_BORDERS[status as Issue['status']]}`}
+            className={`border-l-2 pl-2 mb-3 ${STATUS_BORDERS[status as Issue['status']]}`}
           >
             <h2
               className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status as Issue['status']]}`}
@@ -88,11 +102,15 @@ export function ModeAwareIssueList({
               {status} ({issues.length})
             </h2>
           </div>
-          <div className="space-y-1">
-            {issues.map((issue) => (
-              <IssueCard key={issue.id} issue={issue} />
-            ))}
-          </div>
+          {issues.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-1">No issues</p>
+          ) : (
+            <div className="space-y-2">
+              {issues.map((issue) => (
+                <IssueCard key={issue.id} issue={issue} />
+              ))}
+            </div>
+          )}
         </section>
       ))}
     </div>
