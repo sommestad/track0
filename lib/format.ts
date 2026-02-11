@@ -66,6 +66,17 @@ export function formatThreadStats(stats: ThreadStats): string {
   return base;
 }
 
+export function formatFindResults(
+  results: (Issue & { similarity: number })[],
+): string {
+  return results
+    .map(
+      (r) =>
+        `${r.id} (${(r.similarity * 100).toFixed(0)}%) | P${r.priority} ${r.type} | ${r.status} | ${r.title}\n  ${r.summary || 'No summary yet.'}`,
+    )
+    .join('\n\n');
+}
+
 export function formatIssueConfirmation(
   issue: Issue,
   action: 'Created' | 'Updated',
@@ -127,15 +138,14 @@ export function formatLowPriorityRejection(fields: IssueFields): string {
   ].join('\n');
 }
 
+export function formatIssueLine(issue: Issue): string {
+  return `${issue.id} | P${issue.priority} ${issue.type} | ${issue.status} | ${issue.title}\n  ${issue.summary || 'No summary yet.'}`;
+}
+
 export function formatIssueList(issues: Issue[]): string {
   if (issues.length === 0) {
     return 'No issues found.';
   }
 
-  return issues
-    .map(
-      (i) =>
-        `${i.id} | P${i.priority} ${i.type} | ${i.status} | ${i.title}\n  ${i.summary || 'No summary yet.'}`,
-    )
-    .join('\n\n');
+  return issues.map(formatIssueLine).join('\n\n');
 }

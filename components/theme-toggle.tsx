@@ -3,7 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun } from 'lucide-react';
+import { Terminal, Eye } from 'lucide-react';
 
 const emptySubscribe = () => () => {};
 const getSnapshot = () => true;
@@ -20,7 +20,7 @@ export function ThemeToggle(): React.ReactNode {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon-xs" disabled>
-        <Sun className="size-3" />
+        <Terminal className="size-3" />
       </Button>
     );
   }
@@ -29,13 +29,13 @@ export function ThemeToggle(): React.ReactNode {
     <Button
       variant="ghost"
       size="icon-xs"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      onClick={() => setTheme(theme === 'llm' ? 'human' : 'llm')}
       className="text-muted-foreground hover:text-foreground"
     >
-      {theme === 'dark' ? (
-        <Sun className="size-3" />
+      {theme === 'llm' ? (
+        <Eye className="size-3" />
       ) : (
-        <Moon className="size-3" />
+        <Terminal className="size-3" />
       )}
     </Button>
   );

@@ -10,8 +10,10 @@ export function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="dark"
+      defaultTheme="llm"
+      themes={['llm', 'human']}
       enableSystem={false}
+      storageKey="track0-mode"
     >
       {children}
     </NextThemesProvider>
