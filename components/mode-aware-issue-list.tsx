@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { IssueCard } from '@/components/issue-card';
 import {
   STATUS_COLORS,
@@ -80,6 +80,8 @@ export function ModeAwareIssueList({
   const { theme } = useTheme();
   const mounted = useMounted();
 
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
   const isLlm = !mounted || theme === 'llm';
 
   if (isLlm) {
@@ -112,33 +114,56 @@ export function ModeAwareIssueList({
     );
   }
 
+  const LANE_LIMIT = 5;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-      {grouped.map(({ status, issues }) => (
-        <section
-          key={status}
-          className="bg-muted/30 rounded-lg p-3 min-h-[120px]"
-        >
-          <div
-            className={`border-l-2 pl-2 mb-3 ${STATUS_BORDERS[status as Issue['status']]}`}
+      {grouped.map(({ status, issues }) => {
+        const isExpanded = expanded.has(status);
+        const visible = isExpanded ? issues : issues.slice(0, LANE_LIMIT);
+        const remaining = issues.length - LANE_LIMIT;
+
+        return (
+          <section
+            key={status}
+            className="bg-muted/30 rounded-lg p-3 min-h-[120px]"
           >
-            <h2
-              className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status as Issue['status']]}`}
+            <div
+              className={`border-l-2 pl-2 mb-3 ${STATUS_BORDERS[status as Issue['status']]}`}
             >
-              {status} ({issues.length})
-            </h2>
-          </div>
-          {issues.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-1">No issues</p>
-          ) : (
-            <div className="space-y-2.5">
-              {issues.map((issue) => (
-                <IssueCard key={issue.id} issue={issue} />
-              ))}
+              <h2
+                className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status as Issue['status']]}`}
+              >
+                {status} ({issues.length})
+              </h2>
             </div>
-          )}
-        </section>
-      ))}
+            {issues.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-1">No issues</p>
+            ) : (
+              <div className="space-y-2.5">
+                {visible.map((issue) => (
+                  <IssueCard key={issue.id} issue={issue} />
+                ))}
+                {remaining > 0 && (
+                  <button
+                    onClick={() =>
+                      setExpanded((prev) => {
+                        const next = new Set(prev);
+                        if (isExpanded) next.delete(status);
+                        else next.add(status);
+                        return next;
+                      })
+                    }
+                    className="block w-full text-center text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {isExpanded ? 'Show less' : `More (${remaining})`}
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
