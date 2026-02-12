@@ -23,6 +23,7 @@ vi.mock('../db', () => ({
   getThreadMessages: vi.fn(),
   getNonDoneIssues: vi.fn(),
   vectorSearch: vi.fn(),
+  queryIssues: vi.fn(),
 }));
 
 vi.mock('../ai', () => ({
@@ -36,6 +37,7 @@ import {
   getThreadMessages,
   getNonDoneIssues,
   vectorSearch,
+  queryIssues,
 } from '../db';
 import { generateEmbedding } from '../ai';
 import { runAskAgent } from '../ask-agent';
@@ -48,6 +50,7 @@ const mockGetThreadMessages = vi.mocked(getThreadMessages);
 const mockGetNonDoneIssues = vi.mocked(getNonDoneIssues);
 const mockVectorSearch = vi.mocked(vectorSearch);
 const mockGenerateEmbedding = vi.mocked(generateEmbedding);
+const mockQueryIssues = vi.mocked(queryIssues);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -83,7 +86,7 @@ describe('runAskAgent', () => {
     expect(call.prompt).toBe('What should I work on next?');
   });
 
-  it('should register three tools', async () => {
+  it('should register four tools', async () => {
     mockGenerateText.mockResolvedValue({ text: 'ok' } as never);
 
     await runAskAgent('test');
@@ -95,6 +98,7 @@ describe('runAskAgent', () => {
       'search_issues',
       'list_active_issues',
       'get_issue',
+      'query_issues',
     ]);
   });
 
@@ -189,6 +193,165 @@ describe('ask agent tools', () => {
       } as never);
 
       expect(result).toEqual({ error: 'Issue not found: wi_gone' });
+    });
+  });
+
+  describe('query_issues', () => {
+    it('should filter by status', async () => {
+      mockQueryIssues.mockResolvedValue([
+        {
+          id: 'wi_q1',
+          title: 'Open bug',
+          type: 'bug',
+          status: 'open',
+          priority: 2,
+          labels: [],
+          summary: 'A bug',
+          last_message_by: null,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+          message_count: 3,
+          total_chars: 200,
+          last_message_role: 'user',
+          last_message_content: 'Still broken',
+          last_message_timestamp: '2025-01-01T00:00:00Z',
+          similarity: null,
+        },
+      ]);
+
+      const tools = await extractTools();
+      const result = (await tools.query_issues.execute({
+        status: 'open',
+      } as never)) as { count: number; issues: unknown[] };
+
+      expect(mockQueryIssues).toHaveBeenCalledWith({ status: 'open' });
+      expect(result.count).toBe(1);
+      expect(result.issues[0]).toEqual(
+        expect.objectContaining({ id: 'wi_q1', status: 'open' }),
+      );
+    });
+
+    it('should filter by array of statuses', async () => {
+      mockQueryIssues.mockResolvedValue([]);
+
+      const tools = await extractTools();
+      await tools.query_issues.execute({
+        status: ['open', 'active'],
+      } as never);
+
+      expect(mockQueryIssues).toHaveBeenCalledWith({
+        status: ['open', 'active'],
+      });
+    });
+
+    it('should combine multiple filters', async () => {
+      mockQueryIssues.mockResolvedValue([]);
+
+      const tools = await extractTools();
+      await tools.query_issues.execute({
+        status: 'open',
+        type: 'feature',
+        last_message_by: 'user',
+        max_messages: 3,
+      } as never);
+
+      expect(mockQueryIssues).toHaveBeenCalledWith({
+        status: 'open',
+        type: 'feature',
+        last_message_by: 'user',
+        max_messages: 3,
+      });
+    });
+
+    it('should generate embedding for search param', async () => {
+      mockGenerateEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+      mockQueryIssues.mockResolvedValue([]);
+
+      const tools = await extractTools();
+      await tools.query_issues.execute({
+        status: 'open',
+        search: 'authentication',
+      } as never);
+
+      expect(mockGenerateEmbedding).toHaveBeenCalledWith('authentication');
+      expect(mockQueryIssues).toHaveBeenCalledWith({
+        status: 'open',
+        search_embedding: [0.1, 0.2, 0.3],
+      });
+    });
+
+    it('should omit embedding when generation fails', async () => {
+      mockGenerateEmbedding.mockResolvedValue(null);
+      mockQueryIssues.mockResolvedValue([]);
+
+      const tools = await extractTools();
+      await tools.query_issues.execute({
+        search: 'broken thing',
+      } as never);
+
+      expect(mockQueryIssues).toHaveBeenCalledWith({});
+    });
+
+    it('should return all issues when no filters provided', async () => {
+      mockQueryIssues.mockResolvedValue([]);
+
+      const tools = await extractTools();
+      const result = (await tools.query_issues.execute({} as never)) as {
+        count: number;
+        issues: unknown[];
+      };
+
+      expect(mockQueryIssues).toHaveBeenCalledWith({});
+      expect(result.count).toBe(0);
+      expect(result.issues).toEqual([]);
+    });
+
+    it('should include thread stats and last message in results', async () => {
+      mockQueryIssues.mockResolvedValue([
+        {
+          id: 'wi_q2',
+          title: 'Feature req',
+          type: 'feature',
+          status: 'open',
+          priority: 3,
+          labels: ['ui'],
+          summary: 'A feature',
+          last_message_by: 'user',
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-02T00:00:00Z',
+          message_count: 5,
+          total_chars: 1200,
+          last_message_role: 'user',
+          last_message_content: 'Any update?',
+          last_message_timestamp: '2025-01-02T00:00:00Z',
+          similarity: null,
+        },
+      ]);
+
+      const tools = await extractTools();
+      const result = (await tools.query_issues.execute({
+        type: 'feature',
+      } as never)) as {
+        count: number;
+        issues: Array<{
+          thread: { message_count: number; total_chars: number };
+          last_message: {
+            role: string;
+            content: string;
+            timestamp: string;
+          } | null;
+        }>;
+      };
+
+      expect(result.issues[0].thread).toEqual({
+        message_count: 5,
+        total_chars: 1200,
+      });
+      expect(result.issues[0].last_message).toEqual({
+        role: 'user',
+        content: 'Any update?',
+        timestamp: '2025-01-02T00:00:00Z',
+      });
     });
   });
 });
