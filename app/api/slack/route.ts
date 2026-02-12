@@ -3,6 +3,7 @@ import {
   verifySlackSignature,
   parseSlackMessage,
   postSlackMessage,
+  formatForSlack,
 } from '@/lib/slack';
 import { handleTell, handleAsk, handleGet } from '@/lib/tools';
 
@@ -82,7 +83,13 @@ export async function POST(request: Request) {
           break;
       }
 
-      await postSlackMessage(bot_token, channel, result, thread_ts);
+      const base_url = process.env.TRACK0_BASE_URL;
+      await postSlackMessage(
+        bot_token,
+        channel,
+        formatForSlack(result, base_url),
+        thread_ts,
+      );
     } catch (error) {
       console.error('Slack handler error:', error);
     }

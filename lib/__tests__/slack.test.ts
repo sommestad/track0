@@ -4,6 +4,7 @@ import {
   verifySlackSignature,
   parseSlackMessage,
   postSlackMessage,
+  formatForSlack,
 } from '../slack';
 
 function makeSignature(secret: string, timestamp: string, body: string) {
@@ -58,6 +59,47 @@ describe('parseSlackMessage', () => {
       mode: 'tell',
       body: 'Add rate limiting to the API',
     });
+  });
+});
+
+describe('formatForSlack', () => {
+  it('converts **bold** to *bold*', () => {
+    expect(formatForSlack('This is **important** text')).toBe(
+      'This is *important* text',
+    );
+  });
+
+  it('converts Markdown links to Slack links', () => {
+    expect(formatForSlack('[click here](https://example.com)')).toBe(
+      '<https://example.com|click here>',
+    );
+  });
+
+  it('linkifies standalone wi_ IDs when base_url provided', () => {
+    expect(formatForSlack('See wi_a3Kx for details', 'https://t0.app')).toBe(
+      'See <https://t0.app/issue/wi_a3Kx|wi_a3Kx> for details',
+    );
+  });
+
+  it('leaves wi_ IDs as plain text when no base_url', () => {
+    expect(formatForSlack('See wi_a3Kx for details')).toBe(
+      'See wi_a3Kx for details',
+    );
+  });
+
+  it('does not double-linkify IDs already inside converted links', () => {
+    const md = 'Check [wi_a3Kx](https://t0.app/issue/wi_a3Kx)';
+    expect(formatForSlack(md, 'https://t0.app')).toBe(
+      'Check <https://t0.app/issue/wi_a3Kx|wi_a3Kx>',
+    );
+  });
+
+  it('handles mixed bold and issue IDs', () => {
+    expect(
+      formatForSlack('**Created** wi_x1 and wi_x2', 'https://t0.app'),
+    ).toBe(
+      '*Created* <https://t0.app/issue/wi_x1|wi_x1> and <https://t0.app/issue/wi_x2|wi_x2>',
+    );
   });
 });
 

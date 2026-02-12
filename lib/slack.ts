@@ -46,6 +46,21 @@ export function parseSlackMessage(text: string): ParsedMessage {
   return { mode: 'tell', body: trimmed };
 }
 
+export function formatForSlack(text: string, base_url?: string): string {
+  // Markdown bold → Slack bold
+  let result = text.replace(/\*\*(.+?)\*\*/g, '*$1*');
+  // Markdown links → Slack links
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<$2|$1>');
+  // Linkify standalone issue IDs (avoid double-linkifying ones already inside <...|...>)
+  if (base_url) {
+    result = result.replace(
+      /(?<![|/])\b(wi_\w+)\b/g,
+      `<${base_url}/issue/$1|$1>`,
+    );
+  }
+  return result;
+}
+
 export async function postSlackMessage(
   bot_token: string,
   channel: string,
