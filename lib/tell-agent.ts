@@ -80,16 +80,23 @@ For new_work messages — duplicate detection:
 </tool_usage>
 
 <response_format>
-After the tool returns, respond with a single line:
-[created|updated] [issue_id] — "[title]" (P[priority], [status])
+After the tool returns, respond with a brief, natural confirmation (1 sentence) of what you did.
+Include the issue_id. Mention any notable field changes (e.g. status, priority) if they occurred.
+Examples:
+- "Got it — added to wi_a3Kx and bumped priority to P2."
+- "Created wi_f9Qm: rate limiting for the API (P3, open)."
+- "Updated wi_b2Lp — marked as done."
 </response_format>`;
 
-function createVirtualMessage(content: string): ThreadMessage {
+function createVirtualMessage(
+  content: string,
+  role: ThreadMessage['role'] = 'assistant',
+): ThreadMessage {
   return {
     id: 0,
     issue_id: '',
     timestamp: new Date().toISOString(),
-    role: 'assistant',
+    role,
     content,
   };
 }
@@ -97,12 +104,15 @@ function createVirtualMessage(content: string): ThreadMessage {
 export async function runTellAgent(
   message: string,
   issue_id?: string,
+  role: 'user' | 'assistant' = 'assistant',
 ): Promise<string> {
   await ensureSchema();
 
   const user_prompt = issue_id
     ? `Update issue ${issue_id} with: ${message}`
     : message;
+
+  let affectedIssueId: string | undefined;
 
   const result = await generateText({
     model: gateway('anthropic/claude-sonnet-4.5'),
@@ -151,7 +161,7 @@ export async function runTellAgent(
             .describe('The original message describing the work'),
         }),
         execute: async ({ message: msg }) => {
-          const virtual_message = createVirtualMessage(msg);
+          const virtual_message = createVirtualMessage(msg, role);
           const fields = await extractFields([virtual_message]);
           if (!fields) return { error: 'Could not extract issue details' };
 
@@ -166,8 +176,9 @@ export async function runTellAgent(
           }
 
           const new_id = generateIssueId();
+          affectedIssueId = new_id;
           await createIssue(new_id);
-          await addThreadMessage(new_id, 'assistant', msg);
+          await addThreadMessage(new_id, role, msg);
           await updateIssueFields(new_id, fields);
 
           const embedding = await generateEmbedding(fields.summary);
@@ -200,7 +211,8 @@ export async function runTellAgent(
           const existing = await getIssue(id);
           if (!existing) return { error: `Issue not found: ${id}` };
 
-          await addThreadMessage(id, 'assistant', msg);
+          affectedIssueId = id;
+          await addThreadMessage(id, role, msg);
 
           const messages = await getThreadMessages(id, THREAD_CONTEXT_LIMIT);
           const fields = await extractFields(messages, existing.summary);
@@ -225,6 +237,11 @@ export async function runTellAgent(
     },
     stopWhen: stepCountIs(MAX_AGENT_STEPS),
   });
+
+  // Save the agent's response to the affected issue thread
+  if (result.text && affectedIssueId) {
+    await addThreadMessage(affectedIssueId, 'system', result.text);
+  }
 
   return result.text;
 }

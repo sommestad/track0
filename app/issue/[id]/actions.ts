@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { updateIssueStatus } from '@/lib/db';
+import { handleTell } from '@/lib/tools';
 
 const VALID_STATUSES = new Set(['open', 'active', 'done']);
 
@@ -14,4 +15,14 @@ export async function changeStatus(
   }
   await updateIssueStatus(issueId, status);
   revalidatePath(`/issue/${issueId}`);
+}
+
+export async function tellIssue(
+  issueId: string,
+  message: string,
+): Promise<string> {
+  const result = await handleTell(message, issueId, 'user');
+  revalidatePath(`/issue/${issueId}`);
+  revalidatePath('/');
+  return result;
 }

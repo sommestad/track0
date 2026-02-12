@@ -18,17 +18,7 @@ export default async function Dashboard() {
   }));
 
   for (const g of grouped) {
-    if (g.status === 'open') {
-      g.issues.sort(
-        (a, b) =>
-          a.priority - b.priority ||
-          +new Date(a.updated_at) - +new Date(b.updated_at),
-      );
-    } else {
-      g.issues.sort(
-        (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
-      );
-    }
+    g.issues.sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at));
   }
 
   const total = issues.length;

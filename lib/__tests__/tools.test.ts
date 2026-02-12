@@ -48,6 +48,7 @@ describe('handleTell', () => {
     expect(mockRunTellAgent).toHaveBeenCalledWith(
       'Add rate limiting',
       undefined,
+      'assistant',
     );
     expect(result).toBe('Created wi_new123');
   });
@@ -57,7 +58,11 @@ describe('handleTell', () => {
 
     const result = await handleTell('Update this', 'wi_exist1');
 
-    expect(mockRunTellAgent).toHaveBeenCalledWith('Update this', 'wi_exist1');
+    expect(mockRunTellAgent).toHaveBeenCalledWith(
+      'Update this',
+      'wi_exist1',
+      'assistant',
+    );
     expect(result).toBe('Updated wi_exist1');
   });
 

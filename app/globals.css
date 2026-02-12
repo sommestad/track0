@@ -31,7 +31,7 @@
   --blue: #4e7aa0;
 
   --font-body: var(--font-inter), ui-sans-serif, sans-serif;
-  font-size: 120%;
+  font-size: 110%;
 }
 
 html.llm {
