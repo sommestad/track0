@@ -19,11 +19,6 @@ export function IssueCard({ issue }: IssueCardProps): React.ReactNode {
         <span className="text-sm">{issue.title}</span>
         <PriorityIndicator priority={issue.priority} />
       </div>
-      {issue.summary && (
-        <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
-          {issue.summary}
-        </p>
-      )}
       <p className="text-xs text-muted-foreground mt-1" style={{ opacity }}>
         {timeAgo(issue.updated_at)}
       </p>
