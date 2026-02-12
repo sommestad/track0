@@ -9,6 +9,7 @@ interface IssueCardProps {
 
 export function IssueCard({ issue }: IssueCardProps): React.ReactNode {
   const opacity = ageOpacity(issue.updated_at);
+  const isRecent = opacity <= 0.4;
 
   return (
     <Link
@@ -19,9 +20,15 @@ export function IssueCard({ issue }: IssueCardProps): React.ReactNode {
         <span className="text-sm">{issue.title}</span>
         <PriorityIndicator priority={issue.priority} />
       </div>
-      <p className="text-xs text-muted-foreground mt-1" style={{ opacity }}>
-        {timeAgo(issue.updated_at)}
-      </p>
+      {isRecent ? (
+        <p className="text-xs font-medium text-sky-500 mt-1">
+          {timeAgo(issue.updated_at)}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground mt-1" style={{ opacity }}>
+          {timeAgo(issue.updated_at)}
+        </p>
+      )}
     </Link>
   );
 }

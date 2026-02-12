@@ -98,3 +98,82 @@ body {
   color: var(--foreground);
   font-family: var(--font-body);
 }
+
+.prose-thread {
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.prose-thread > *:first-child {
+  margin-top: 0;
+}
+.prose-thread > *:last-child {
+  margin-bottom: 0;
+}
+.prose-thread h1 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.375rem;
+}
+.prose-thread h2 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.375rem;
+}
+.prose-thread h3 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0.625rem 0 0.25rem;
+}
+.prose-thread p {
+  margin: 0.5rem 0;
+}
+.prose-thread ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.prose-thread ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.prose-thread li {
+  margin: 0.25rem 0;
+  display: list-item;
+}
+.prose-thread table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.625rem 0;
+  font-size: 0.6875rem;
+}
+.prose-thread th,
+.prose-thread td {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+.prose-thread th {
+  font-weight: 600;
+  background: var(--muted);
+}
+.prose-thread input[type='checkbox'] {
+  margin-right: 0.375rem;
+}
+.prose-thread code {
+  font-size: 0.6875rem;
+  background: var(--muted);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+}
+.prose-thread pre {
+  background: var(--muted);
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin: 0.625rem 0;
+}
+.prose-thread pre code {
+  background: none;
+  padding: 0;
+}

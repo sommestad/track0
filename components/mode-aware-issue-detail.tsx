@@ -2,6 +2,8 @@
 
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Badge } from '@/components/ui/badge';
 import { StatusSelector } from '@/components/status-selector';
 import { TellInput } from '@/components/tell-input';
@@ -168,9 +170,11 @@ export function ModeAwareIssueDetail({
                       .replace('T', ' ')}
                   </span>
                 </div>
-                <p className="text-xs whitespace-pre-wrap mt-1">
-                  {msg.content}
-                </p>
+                <div className="prose-thread mt-1">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
               </div>
             ))}
           </div>
