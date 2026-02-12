@@ -4,6 +4,7 @@ import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { StatusSelector } from '@/components/status-selector';
+import { TellInput } from '@/components/tell-input';
 import { STATUS_COLORS, ROLE_COLORS } from '@/lib/constants';
 import { formatCharCount, computeThreadStats } from '@/lib/format';
 import type { Issue, ThreadMessage } from '@/lib/types';
@@ -175,6 +176,8 @@ export function ModeAwareIssueDetail({
           </div>
         </section>
       )}
+
+      <TellInput issueId={issue.id} />
     </>
   );
 }
