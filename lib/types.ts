@@ -37,3 +37,33 @@ export const IssueFieldsSchema = z.object({
 });
 
 export type IssueFields = z.infer<typeof IssueFieldsSchema>;
+
+export interface QueryIssuesFilters {
+  status?: Issue['status'] | Issue['status'][];
+  type?: Issue['type'] | Issue['type'][];
+  priority_max?: number;
+  last_message_by?: 'user' | 'assistant' | 'system';
+  labels?: string[];
+  min_messages?: number;
+  max_messages?: number;
+  search_embedding?: number[];
+}
+
+export interface QueryIssueResult {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  priority: number;
+  labels: string[];
+  summary: string;
+  last_message_by: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  total_chars: number;
+  last_message_role: string | null;
+  last_message_content: string | null;
+  last_message_timestamp: string | null;
+  similarity: number | null;
+}

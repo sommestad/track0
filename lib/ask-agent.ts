@@ -7,9 +7,15 @@ import {
   getThreadMessages,
   getNonDoneIssues,
   vectorSearch,
+  queryIssues,
 } from './db';
 import { generateEmbedding } from './ai';
-import { searchResultsPayload, activeIssuesPayload } from './format';
+import {
+  searchResultsPayload,
+  activeIssuesPayload,
+  queryResultsPayload,
+} from './format';
+import { QueryIssuesFilters } from './types';
 
 const SEARCH_LIMIT = 10;
 const MAX_AGENT_STEPS = 5;
@@ -25,6 +31,9 @@ Choose tools based on the question:
 - User asks about a specific topic or keyword: call search_issues with a concise query.
 - User asks for an overview, backlog, or "what's next": call list_active_issues.
 - User references a specific issue ID (e.g. wi_a3Kx): call get_issue directly with that ID.
+- User asks a filtered question (e.g. "open bugs", "P1-P2 features", "issues with few messages",
+  "issues where last message was by a human"): call query_issues with appropriate filters.
+  Combine search + filters when the question has both a topic and constraints.
 - If search results are insufficient, call a second tool to supplement. Do not call more than 2 tools.
 </task>
 
@@ -80,6 +89,84 @@ export async function runAskAgent(question: string): Promise<string> {
           if (!issue) return { error: `Issue not found: ${id}` };
           const messages = await getThreadMessages(id);
           return { issue, messages };
+        },
+      }),
+
+      query_issues: tool({
+        description:
+          'Query issues with compound filters. Returns issues with thread stats (message count, total chars) and last message preview. Use for filtered questions like "open bugs", "P1-P2 features", or "issues where last message was by a human with few messages".',
+        inputSchema: z.object({
+          status: z
+            .union([
+              z.enum(['open', 'active', 'done']),
+              z.array(z.enum(['open', 'active', 'done'])),
+            ])
+            .optional()
+            .describe('Filter by status (single or array)'),
+          type: z
+            .union([
+              z.enum(['bug', 'feature', 'task']),
+              z.array(z.enum(['bug', 'feature', 'task'])),
+            ])
+            .optional()
+            .describe('Filter by type (single or array)'),
+          priority_max: z
+            .number()
+            .int()
+            .min(1)
+            .max(5)
+            .optional()
+            .describe('Maximum priority (1=critical, 5=negligible)'),
+          last_message_by: z
+            .enum(['user', 'assistant', 'system'])
+            .optional()
+            .describe('Filter by who sent the last message'),
+          labels: z
+            .array(z.string())
+            .optional()
+            .describe('Filter by labels (any match)'),
+          min_messages: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe('Minimum thread message count'),
+          max_messages: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe('Maximum thread message count'),
+          search: z
+            .string()
+            .optional()
+            .describe(
+              'Semantic search query — results ranked by similarity when provided',
+            ),
+        }),
+        execute: async (params) => {
+          const filters: QueryIssuesFilters = {};
+          if (params.status !== undefined) filters.status = params.status;
+          if (params.type !== undefined) filters.type = params.type;
+          if (params.priority_max !== undefined)
+            filters.priority_max = params.priority_max;
+          if (params.last_message_by !== undefined)
+            filters.last_message_by = params.last_message_by;
+          if (params.labels !== undefined) filters.labels = params.labels;
+          if (params.min_messages !== undefined)
+            filters.min_messages = params.min_messages;
+          if (params.max_messages !== undefined)
+            filters.max_messages = params.max_messages;
+
+          if (params.search) {
+            const embedding = await generateEmbedding(params.search);
+            if (embedding) {
+              filters.search_embedding = embedding;
+            }
+          }
+
+          const results = await queryIssues(filters);
+          return queryResultsPayload(results);
         },
       }),
     },

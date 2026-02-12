@@ -1,4 +1,10 @@
-import { Issue, IssueFields, ThreadMessage, ThreadStats } from './types';
+import {
+  Issue,
+  IssueFields,
+  ThreadMessage,
+  ThreadStats,
+  QueryIssueResult,
+} from './types';
 
 const MINUTE = 60;
 const HOUR = 3600;
@@ -176,4 +182,33 @@ export function formatIssueList(issues: Issue[]): string {
   }
 
   return issues.map(formatIssueLine).join('\n\n');
+}
+
+export function queryResultsPayload(results: QueryIssueResult[]) {
+  return {
+    count: results.length,
+    issues: results.map((r) => ({
+      id: r.id,
+      title: r.title,
+      type: r.type,
+      status: r.status,
+      priority: r.priority,
+      labels: r.labels,
+      summary: r.summary,
+      last_message_by: r.last_message_by,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      thread: { message_count: r.message_count, total_chars: r.total_chars },
+      last_message: r.last_message_role
+        ? {
+            role: r.last_message_role,
+            content: r.last_message_content,
+            timestamp: r.last_message_timestamp,
+          }
+        : null,
+      ...(r.similarity !== null
+        ? { similarity: Math.round(r.similarity * 100) }
+        : {}),
+    })),
+  };
 }

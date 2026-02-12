@@ -1,5 +1,11 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless';
-import { Issue, ThreadMessage, ThreadStats } from './types';
+import {
+  Issue,
+  ThreadMessage,
+  ThreadStats,
+  QueryIssuesFilters,
+  QueryIssueResult,
+} from './types';
 
 let _sql: NeonQueryFunction<false, false>;
 
@@ -272,4 +278,154 @@ export async function getThreadStatsBatch(
     });
   }
   return map;
+}
+
+const QUERY_ISSUES_LIMIT = 25;
+
+function parseQueryIssueRow(row: Record<string, unknown>): QueryIssueResult {
+  let labels: string[];
+  try {
+    labels =
+      typeof row.labels === 'string' ? JSON.parse(row.labels) : row.labels;
+  } catch {
+    labels = [];
+  }
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    type: row.type as string,
+    status: row.status as string,
+    priority: row.priority as number,
+    labels: labels as string[],
+    summary: row.summary as string,
+    last_message_by: (row.last_message_by as string) ?? null,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+    message_count: (row.message_count as number) ?? 0,
+    total_chars: (row.total_chars as number) ?? 0,
+    last_message_role: (row.last_message_role as string) ?? null,
+    last_message_content: (row.last_message_content as string) ?? null,
+    last_message_timestamp: (row.last_message_timestamp as string) ?? null,
+    similarity: (row.similarity as number) ?? null,
+  };
+}
+
+export async function queryIssues(
+  filters: QueryIssuesFilters,
+): Promise<QueryIssueResult[]> {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  let paramIndex = 1;
+
+  const hasEmbedding =
+    filters.search_embedding && filters.search_embedding.length > 0;
+
+  let similarityExpr = 'NULL';
+  if (hasEmbedding) {
+    const vectorString = `[${filters.search_embedding!.join(',')}]`;
+    similarityExpr = `1 - (i.embedding <=> $${paramIndex}::vector)`;
+    params.push(vectorString);
+    paramIndex++;
+    conditions.push('i.embedding IS NOT NULL');
+  }
+
+  if (filters.status !== undefined) {
+    if (Array.isArray(filters.status)) {
+      conditions.push(`i.status = ANY($${paramIndex})`);
+      params.push(filters.status);
+      paramIndex++;
+    } else {
+      conditions.push(`i.status = $${paramIndex}`);
+      params.push(filters.status);
+      paramIndex++;
+    }
+  }
+
+  if (filters.type !== undefined) {
+    if (Array.isArray(filters.type)) {
+      conditions.push(`i.type = ANY($${paramIndex})`);
+      params.push(filters.type);
+      paramIndex++;
+    } else {
+      conditions.push(`i.type = $${paramIndex}`);
+      params.push(filters.type);
+      paramIndex++;
+    }
+  }
+
+  if (filters.priority_max !== undefined) {
+    conditions.push(`i.priority <= $${paramIndex}`);
+    params.push(filters.priority_max);
+    paramIndex++;
+  }
+
+  if (filters.last_message_by !== undefined) {
+    conditions.push(`last_msg.role = $${paramIndex}`);
+    params.push(filters.last_message_by);
+    paramIndex++;
+  }
+
+  if (filters.labels && filters.labels.length > 0) {
+    conditions.push(`jsonb_exists_any(i.labels, $${paramIndex}::text[])`);
+    params.push(filters.labels);
+    paramIndex++;
+  }
+
+  if (filters.min_messages !== undefined) {
+    conditions.push(`ts.message_count >= $${paramIndex}`);
+    params.push(filters.min_messages);
+    paramIndex++;
+  }
+
+  if (filters.max_messages !== undefined) {
+    conditions.push(`ts.message_count <= $${paramIndex}`);
+    params.push(filters.max_messages);
+    paramIndex++;
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const orderClause = hasEmbedding
+    ? 'ORDER BY similarity DESC NULLS LAST'
+    : 'ORDER BY i.priority ASC, i.updated_at DESC';
+
+  const limitParam = `$${paramIndex}`;
+  params.push(QUERY_ISSUES_LIMIT);
+
+  const queryString = `
+    SELECT i.id, i.title, i.type, i.status, i.priority, i.labels, i.summary,
+           last_msg.role AS last_message_by,
+           i.created_at, i.updated_at,
+           COALESCE(ts.message_count, 0) AS message_count,
+           COALESCE(ts.total_chars, 0) AS total_chars,
+           last_msg.role AS last_message_role,
+           LEFT(last_msg.content, 500) AS last_message_content,
+           last_msg.timestamp AS last_message_timestamp,
+           ${similarityExpr} AS similarity
+    FROM issues i
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*)::int AS message_count,
+             COALESCE(SUM(LENGTH(content)), 0)::int AS total_chars
+      FROM thread_messages WHERE issue_id = i.id
+    ) ts ON true
+    LEFT JOIN LATERAL (
+      SELECT role, content, timestamp
+      FROM thread_messages WHERE issue_id = i.id
+      ORDER BY timestamp DESC LIMIT 1
+    ) last_msg ON true
+    ${whereClause}
+    ${orderClause}
+    LIMIT ${limitParam}
+  `;
+
+  // Split query on $N placeholders to create a fake TemplateStringsArray
+  // for the neon tagged template function
+  const parts = queryString.split(/\$\d+/);
+  const strings = Object.assign([...parts], { raw: [...parts] });
+  const rows = await sql()(
+    strings as unknown as TemplateStringsArray,
+    ...params,
+  );
+  return rows.map(parseQueryIssueRow);
 }
