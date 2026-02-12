@@ -41,6 +41,63 @@ Add to `.mcp.json` in any repo:
 }
 ```
 
+## Connect from Slack
+
+You can DM the bot to create/update issues, ask questions, and look up issues — same capabilities as the MCP tools.
+
+### 1. Create a Slack App
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App** > **From scratch**
+2. Name it (e.g. "track0") and pick your workspace
+
+### 2. Configure bot permissions
+
+1. Go to **OAuth & Permissions** in the sidebar
+2. Under **Bot Token Scopes**, add:
+   - `chat:write` — send replies
+   - `im:history` — read DMs
+
+### 3. Enable events
+
+1. Go to **Event Subscriptions** in the sidebar and toggle **Enable Events** on
+2. Set the **Request URL** to:
+   ```
+   https://<your-track0-domain>/api/slack
+   ```
+   Slack will send a challenge request — the endpoint handles this automatically.
+3. Under **Subscribe to bot events**, add:
+   - `message.im`
+4. Click **Save Changes**
+
+### 4. Install to workspace
+
+1. Go to **Install App** in the sidebar and click **Install to Workspace**
+2. Authorize the requested permissions
+
+### 5. Set environment variables
+
+Grab these two values and add them to your Vercel project (Settings > Environment Variables):
+
+| Variable               | Where to find it                                                         |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `SLACK_BOT_TOKEN`      | **OAuth & Permissions** > **Bot User OAuth Token** (starts with `xoxb-`) |
+| `SLACK_SIGNING_SECRET` | **Basic Information** > **App Credentials** > **Signing Secret**         |
+
+Redeploy after setting the variables.
+
+### 6. DM the bot
+
+Open a DM with your bot in Slack. Message routing:
+
+| Message                        | Action                                               |
+| ------------------------------ | ---------------------------------------------------- |
+| `?what bugs are open`          | Ask a question about tracked issues                  |
+| `get wi_a3Kx`                  | Get full details for an issue                        |
+| `tell wi_a3Kx: this is done`   | Update a specific issue                              |
+| `Add rate limiting to the API` | Create or match an issue (anything without a prefix) |
+
+For more details on Slack app setup, see the [Slack Events API docs](https://api.slack.com/apis/events-api).
+
 ## Recommended usage from CLAUDE.md
 
 Add a guideline to your project's `CLAUDE.md` so the coding agent logs significant work automatically:
