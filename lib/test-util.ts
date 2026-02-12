@@ -12,6 +12,7 @@ export function createBaseIssue(overrides?: Partial<Issue>): Issue {
     embedding: null,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
+    last_message_by: null,
     ...overrides,
   };
 }

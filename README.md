@@ -71,10 +71,11 @@ You can DM the bot to create/update issues, ask questions, and look up issues â€
 
 Grab these two values and add them to your Vercel project (Settings > Environment Variables):
 
-| Variable               | Where to find it                                                         |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `SLACK_BOT_TOKEN`      | **OAuth & Permissions** > **Bot User OAuth Token** (starts with `xoxb-`) |
-| `SLACK_SIGNING_SECRET` | **Basic Information** > **App Credentials** > **Signing Secret**         |
+| Variable               | Where to find it                                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `SLACK_BOT_TOKEN`      | **OAuth & Permissions** > **Bot User OAuth Token** (starts with `xoxb-`)                                              |
+| `SLACK_SIGNING_SECRET` | **Basic Information** > **App Credentials** > **Signing Secret**                                                      |
+| `TRACK0_BASE_URL`      | Your dashboard URL, e.g. `https://your-track0.vercel.app` (optional â€” enables clickable issue links in Slack replies) |
 
 Redeploy after setting the variables.
 

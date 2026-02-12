@@ -21,7 +21,11 @@ function parseRow(row: Record<string, unknown>): Issue {
   } catch {
     labels = [];
   }
-  return { ...row, labels } as Issue;
+  return {
+    ...row,
+    labels,
+    last_message_by: (row.last_message_by as Issue['last_message_by']) ?? null,
+  } as Issue;
 }
 
 let schema_initialized = false;
@@ -188,7 +192,8 @@ export async function getThreadMessages(
 
 export async function getIssuesByStatus(): Promise<Issue[]> {
   const rows = await sql()`
-    SELECT id, title, type, status, priority, labels, summary, created_at, updated_at
+    SELECT id, title, type, status, priority, labels, summary, created_at, updated_at,
+           (SELECT role FROM thread_messages WHERE issue_id = issues.id ORDER BY timestamp DESC LIMIT 1) AS last_message_by
     FROM issues
     ORDER BY
       CASE status
@@ -203,7 +208,8 @@ export async function getIssuesByStatus(): Promise<Issue[]> {
 
 export async function getNonDoneIssues(): Promise<Issue[]> {
   const rows = await sql()`
-    SELECT id, title, type, status, priority, labels, summary, created_at, updated_at
+    SELECT id, title, type, status, priority, labels, summary, created_at, updated_at,
+           (SELECT role FROM thread_messages WHERE issue_id = issues.id ORDER BY timestamp DESC LIMIT 1) AS last_message_by
     FROM issues
     WHERE status != 'done'
     ORDER BY
@@ -221,7 +227,8 @@ export async function vectorSearch(
   const vectorString = `[${embedding.join(',')}]`;
   const rows = await sql()`
     SELECT id, title, type, status, priority, labels, summary, created_at, updated_at,
-           1 - (embedding <=> ${vectorString}::vector) as similarity
+           1 - (embedding <=> ${vectorString}::vector) as similarity,
+           (SELECT role FROM thread_messages WHERE issue_id = issues.id ORDER BY timestamp DESC LIMIT 1) AS last_message_by
     FROM issues
     WHERE embedding IS NOT NULL
     ORDER BY embedding <=> ${vectorString}::vector

@@ -79,7 +79,7 @@ export async function POST(request: Request) {
           result = await handleGet(parsed.body);
           break;
         case 'tell':
-          result = await handleTell(parsed.body, parsed.issue_id);
+          result = await handleTell(parsed.body, parsed.issue_id, 'user');
           break;
       }
 

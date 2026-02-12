@@ -21,7 +21,7 @@ export async function tellIssue(
   issueId: string,
   message: string,
 ): Promise<string> {
-  const result = await handleTell(message, issueId);
+  const result = await handleTell(message, issueId, 'user');
   revalidatePath(`/issue/${issueId}`);
   revalidatePath('/');
   return result;

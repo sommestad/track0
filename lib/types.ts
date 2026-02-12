@@ -11,6 +11,7 @@ export interface Issue {
   embedding: number[] | null;
   created_at: string;
   updated_at: string;
+  last_message_by: 'user' | 'assistant' | 'system' | null;
 }
 
 export interface ThreadMessage {

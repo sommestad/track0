@@ -18,9 +18,7 @@ export default async function Dashboard() {
   }));
 
   for (const g of grouped) {
-    g.issues.sort(
-      (a, b) => +new Date(b.updated_at) - +new Date(a.updated_at),
-    );
+    g.issues.sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at));
   }
 
   const total = issues.length;

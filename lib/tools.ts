@@ -22,9 +22,10 @@ async function safeExecute(
 export async function handleTell(
   message: string,
   issue_id?: string,
+  role: 'user' | 'assistant' = 'assistant',
 ): Promise<string> {
   return safeExecute('Error processing message', () =>
-    runTellAgent(message, issue_id),
+    runTellAgent(message, issue_id, role),
   );
 }
 

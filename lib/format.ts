@@ -107,6 +107,9 @@ export function formatIssueDetail(
     `${issue.id}: "${issue.title}"`,
     `P${issue.priority} ${issue.type} | ${issue.status} | ${labels}`,
     `Created ${formatDate(issue.created_at)} | Updated ${formatDate(issue.updated_at)}`,
+    ...(issue.last_message_by
+      ? [`Last message by: ${issue.last_message_by}`]
+      : []),
     '',
     issue.summary || 'No summary yet.',
   ].join('\n');
@@ -143,6 +146,7 @@ export function issueSummaryPayload(issue: Issue) {
     status: issue.status,
     priority: issue.priority,
     summary: issue.summary,
+    last_message_by: issue.last_message_by,
   };
 }
 
