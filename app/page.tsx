@@ -1,6 +1,7 @@
 import { ensureSchema, getIssuesByStatus, getThreadStatsBatch } from '@/lib/db';
 import { STATUS_ORDER } from '@/lib/constants';
 import { ModeAwareIssueList } from '@/components/mode-aware-issue-list';
+import { AutoRefresh } from '@/components/auto-refresh';
 import { LogoutButton } from './logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -23,6 +24,7 @@ export default async function Dashboard() {
 
   return (
     <main className="max-w-6xl dark:max-w-3xl mx-auto px-4 py-6">
+      <AutoRefresh />
       <div className="flex items-baseline justify-between mb-4">
         <h1 className="text-base font-bold dark:font-mono">track0</h1>
         <div className="flex items-center gap-3">

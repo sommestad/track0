@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ensureSchema, getIssue, getThreadMessages } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { ModeAwareIssueDetail } from '@/components/mode-aware-issue-detail';
+import { AutoRefresh } from '@/components/auto-refresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ export default async function IssuePage({
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6">
+      <AutoRefresh />
       <Button
         variant="link"
         asChild
