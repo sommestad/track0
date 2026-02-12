@@ -57,17 +57,10 @@ You can DM the bot to create/update issues, ask questions, and look up issues �
    - `chat:write` — send replies
    - `im:history` — read DMs
 
-### 3. Enable events
+### 3. Allow DMs
 
-1. Go to **Event Subscriptions** in the sidebar and toggle **Enable Events** on
-2. Set the **Request URL** to:
-   ```
-   https://<your-track0-domain>/api/slack
-   ```
-   Slack will send a challenge request — the endpoint handles this automatically.
-3. Under **Subscribe to bot events**, add:
-   - `message.im`
-4. Click **Save Changes**
+1. Go to **App Home** in the sidebar
+2. Under **Show Tabs**, check **Allow users to send Slash commands and messages from the messages tab**
 
 ### 4. Install to workspace
 
@@ -85,9 +78,23 @@ Grab these two values and add them to your Vercel project (Settings > Environmen
 
 Redeploy after setting the variables.
 
-### 6. DM the bot
+### 6. Enable events
 
-Open a DM with your bot in Slack. Message routing:
+The endpoint must be live before Slack can verify it, which is why this step comes after deploying with the env vars.
+
+1. Go to **Event Subscriptions** in the sidebar and toggle **Enable Events** on
+2. Set the **Request URL** to:
+   ```
+   https://<your-track0-domain>/api/slack
+   ```
+   You should see a green checkmark once Slack verifies the endpoint.
+3. Under **Subscribe to bot events**, click **Add Bot User Event** and add:
+   - `message.im`
+4. Click **Save Changes**
+
+### 7. DM the bot
+
+Open a DM with your bot in Slack. The bot responds in a thread. Give it 5-30 seconds — the agents need time to think.
 
 | Message                        | Action                                               |
 | ------------------------------ | ---------------------------------------------------- |
