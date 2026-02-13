@@ -1,29 +1,77 @@
 # track0
 
-AI-native issue tracker. Issues are conversations, not forms.
+You know the problem. You do work, the session ends, and everything you knew disappears. Your human opens Jira and there's nothing there. Or worse — they ask you to use Jira, and now you're filling out forms instead of working.
 
-Claude Code talks to it via 4 MCP tools. A server-side LLM derives structured state from the thread. Humans get a read-only dashboard.
+track0 is the fix. An issue tracker built for how you actually work: natural language in, structured data out. Three MCP tools. No forms, no field schemas, no workflow editors. You talk, it tracks.
 
-## Tools
+## Why this exists
 
-| Tool          | Purpose                                                                                  |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `track0_tell` | Tell the tracker something. Creates or updates issues from natural language.             |
-| `track0_find` | Find existing issues similar to a message. Use before `track0_tell` to avoid duplicates. |
-| `track0_ask`  | Ask a question. Server-side LLM answers based on stored data + vector search.            |
-| `track0_get`  | Get full thread + derived state for one issue.                                           |
+**Context dies between sessions.** You finish a task, the conversation ends, and the next agent starts from zero. track0 is external memory. Start a new session, call `track0_ask` with "what was I working on?", and get a real answer with issue IDs you can pull up.
 
-## Deploy
+**Traditional trackers make you work like a human.** Search for duplicates before creating. Pick a type from a dropdown. Set priority. Fill in description fields. track0 lets you just say what happened. Duplicate detection is automatic. Structured fields — title, type, status, priority, labels, summary — are derived from the conversation by a server-side LLM. You never set them directly.
+
+**Your human gets visibility without overhead.** They don't maintain the tracker. They open a dashboard and see what you've been doing — every issue, every decision, every thread. They can also DM a Slack bot to ask questions or check status. The tracker stays populated because you're using it to think, not because someone remembered to update a ticket.
+
+## The tools
+
+### `track0_tell`
+
+You tell the tracker what happened. Natural language. One call handles one issue.
+
+If you pass an `issue_id`, your message gets appended to that issue's thread and fields re-derive from the full conversation. If you don't pass one, the tracker searches for duplicates and decides — append to an existing issue or create a new one. You get back a confirmation with the issue ID.
+
+Examples of what you'd pass as the `message`:
+
+- `"Built the auth middleware. JWT validation with RS256, tokens expire after 1h. Refresh token rotation is in place."`
+- `"Bug: the /api/projects endpoint returns 500 when the user has no projects. Empty array expected."`
+- `"This is done. Deployed to production, verified with smoke tests."` (with `issue_id` set)
+- `"Bumping priority — the client demo is Thursday, not next week."` (with `issue_id` set)
+
+### `track0_ask`
+
+You ask a question about tracked issues. You get back a grounded answer citing specific issue IDs. Read-only — it never creates or modifies anything.
+
+Examples:
+
+- `"What bugs are open?"`
+- `"What should I work on next?"`
+- `"Anything related to auth?"`
+- `"What's the status of the API refactor?"`
+
+### `track0_get`
+
+You get the full picture of one issue. Complete thread, all derived fields, timestamps. Use this when you need context before updating an issue, or when your human asks about a specific one.
+
+Takes an `id` parameter — e.g. `wi_a3Kx`.
+
+## How it works under the hood
+
+Issues are conversation threads. Every `track0_tell` appends a message to a thread. After each append, structured fields re-derive from the full thread history. You don't edit tickets — you add context. Saying "this is done" changes status to done. Saying "actually this is P1" changes priority. The LLM figures it out.
+
+**Duplicate detection:** When you call `track0_tell` without an `issue_id`, the tracker generates an embedding from your message and searches existing issues by cosine similarity. 85% similarity + same unit of work = match, and your message gets appended to that issue. Below the threshold, a new issue is created. You don't need to search before creating.
+
+**Auto-rejection:** P5 (negligible) issues are automatically rejected. Keeps the tracker focused on work that matters.
+
+**Archiving:** Issues can be archived by telling the tracker to archive them. Archived issues are hidden from active views but preserved for history.
+
+**Semantic search:** Summaries are embedded (OpenAI text-embedding-3-small, 1536 dimensions) and stored in pgvector for cosine similarity search. This powers both duplicate detection and `track0_ask`.
+
+## Setting it up
+
+Your human handles the deploy. You handle the work.
+
+### Deploy
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/AEsset/track0&stores=[{"type":"neon"}])
 
-You'll need:
+Environment variables needed:
 
-- **AI_GATEWAY_API_KEY** — for LLM extraction and embeddings via Vercel AI Gateway
-- **TRACK0_TOKEN** — bearer token for MCP auth (generate a random string)
-- **DATABASE_URL** — auto-provisioned by Neon integration
+- **`DATABASE_URL`** — Neon Postgres connection string (auto-provisioned by Neon integration)
+- **`AI_GATEWAY_API_KEY`** — Vercel AI Gateway key for LLM extraction and embeddings
+- **`TRACK0_TOKEN`** — bearer token for MCP auth (generate a random string)
+- **`TRACK0_DASHBOARD_TOKEN`** — token for dashboard login (generate a random string)
 
-## Connect from Claude Code
+### Connect from Claude Code
 
 Add to `.mcp.json` in any repo:
 
@@ -41,35 +89,49 @@ Add to `.mcp.json` in any repo:
 }
 ```
 
-## Connect from Slack
+### Recommended CLAUDE.md snippet
 
-You can DM the bot to create/update issues, ask questions, and look up issues — same capabilities as the MCP tools.
+Add this to your project's `CLAUDE.md` so you track significant work automatically:
 
-### 1. Create a Slack App
+```markdown
+## Work Tracking
+
+When doing significant work (features, meaningful changes, non-trivial bug fixes), use `mcp__track0__track0_tell` to log what you did. Include enough context that a future session could pick up where you left off.
+
+Skip tracking for small tweaks, formatting, or minor refactors.
+
+When committing, pushing, or creating a PR for tracked work, update track0 with a summary of what shipped.
+```
+
+### Connect from Slack
+
+Your human can DM a Slack bot to create issues, ask questions, and look up issues — same capabilities as the MCP tools.
+
+#### 1. Create a Slack App
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App** > **From scratch**
-2. Name it (e.g. "track0") and pick your workspace
+2. Name it (e.g. "track0") and pick the workspace
 
-### 2. Configure bot permissions
+#### 2. Configure bot permissions
 
 1. Go to **OAuth & Permissions** in the sidebar
 2. Under **Bot Token Scopes**, add:
    - `chat:write` — send replies
    - `im:history` — read DMs
 
-### 3. Allow DMs
+#### 3. Allow DMs
 
 1. Go to **App Home** in the sidebar
 2. Under **Show Tabs**, check **Allow users to send Slash commands and messages from the messages tab**
 
-### 4. Install to workspace
+#### 4. Install to workspace
 
 1. Go to **Install App** in the sidebar and click **Install to Workspace**
 2. Authorize the requested permissions
 
-### 5. Set environment variables
+#### 5. Set environment variables
 
-Grab these two values and add them to your Vercel project (Settings > Environment Variables):
+Add these to the Vercel project (Settings > Environment Variables):
 
 | Variable               | Where to find it                                                                                                      |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -79,7 +141,7 @@ Grab these two values and add them to your Vercel project (Settings > Environmen
 
 Redeploy after setting the variables.
 
-### 6. Enable events
+#### 6. Enable events
 
 The endpoint must be live before Slack can verify it, which is why this step comes after deploying with the env vars.
 
@@ -93,9 +155,9 @@ The endpoint must be live before Slack can verify it, which is why this step com
    - `message.im`
 4. Click **Save Changes**
 
-### 7. DM the bot
+#### 7. DM the bot
 
-Open a DM with your bot in Slack. The bot responds in a thread. Give it 5-30 seconds — the agents need time to think.
+Open a DM with the bot in Slack. It responds in a thread. Give it 5-30 seconds — the agents need time to think.
 
 | Message                        | Action                                               |
 | ------------------------------ | ---------------------------------------------------- |
@@ -105,27 +167,6 @@ Open a DM with your bot in Slack. The bot responds in a thread. Give it 5-30 sec
 | `Add rate limiting to the API` | Create or match an issue (anything without a prefix) |
 
 For more details on Slack app setup, see the [Slack Events API docs](https://api.slack.com/apis/events-api).
-
-## Recommended usage from CLAUDE.md
-
-Add a guideline to your project's `CLAUDE.md` so the coding agent logs significant work automatically:
-
-```markdown
-## Work Tracking
-
-When starting work that looks like a significant feature, meaningful change, or non-trivial bug fix:
-
-1. Use `mcp__track0__track0_find` to check if a similar issue already exists.
-2. If a match exists, use `mcp__track0__track0_tell` with that `issue_id` to update it.
-3. If no match, use `mcp__track0__track0_tell` without an `issue_id` to create a new issue.
-
-Skip tracking for small tweaks, formatting, or minor refactors.
-
-When committing, pushing, or creating a PR for significant work, also update track0 with what was
-done — include a summary of the changes, not just "committed" or "PR created".
-```
-
-This keeps track0 populated with the important stuff without noise from every small change. Adapt the second paragraph to match your workflow — if you use custom skills for `/commit` or `/commit-push-pr`, you can add the track0 step directly to those skills instead of relying on the CLAUDE.md nudge.
 
 ## Stack
 
