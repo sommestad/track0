@@ -238,10 +238,5 @@ export async function runTellAgent(
     stopWhen: stepCountIs(MAX_AGENT_STEPS),
   });
 
-  // Save the agent's response to the affected issue thread
-  if (result.text && affectedIssueId) {
-    await addThreadMessage(affectedIssueId, 'system', result.text);
-  }
-
   return result.text;
 }
