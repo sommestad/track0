@@ -27,6 +27,7 @@ Bad: "Investigating rate limiting options"
 - "open" = not started, just discussed
 - "active" = work mentioned, in progress, or partially complete
 - "done" = explicitly completed, closed, merged, or marked as resolved
+- "archived" = explicitly archived, shelved, or abandoned — the work is not done but no longer being pursued
 </field>
 
 <field name="priority">

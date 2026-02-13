@@ -70,7 +70,7 @@ export async function runAskAgent(question: string): Promise<string> {
 
       list_active_issues: tool({
         description:
-          'List all non-done issues (open and active), ordered by priority',
+          'List all non-done, non-archived issues (open and active), ordered by priority',
         inputSchema: z.object({}),
         execute: async () => {
           const issues = await getNonDoneIssues();
@@ -98,8 +98,8 @@ export async function runAskAgent(question: string): Promise<string> {
         inputSchema: z.object({
           status: z
             .union([
-              z.enum(['open', 'active', 'done']),
-              z.array(z.enum(['open', 'active', 'done'])),
+              z.enum(['open', 'active', 'done', 'archived']),
+              z.array(z.enum(['open', 'active', 'done', 'archived'])),
             ])
             .optional()
             .describe('Filter by status (single or array)'),
