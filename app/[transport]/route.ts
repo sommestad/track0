@@ -6,7 +6,7 @@ const handler = createMcpHandler(
   (server) => {
     server.tool(
       'track0_tell',
-      'Tell the tracker about work being done, decisions made, or problems found. Creates a new issue or updates an existing one. When no issue_id is provided, the tracker automatically searches for duplicates and either creates a new issue or updates a matching one. When an issue_id is given, it updates that issue directly. Extracts structured fields (title, type, status, priority, labels, summary) from your natural language message.',
+      "Tell the tracker about work being done, decisions made, or problems found. Creates a new issue or updates an existing one.\n\nBehavior:\n- When no issue_id is provided, searches for duplicate/related issues. If a strong match is found, appends your message to that issue's thread. Otherwise creates a new issue.\n- When issue_id is provided, appends your message directly to that issue's thread.\n- After appending, structured fields (title, type, status, priority, labels, summary) are re-derived from the full thread. Fields you don't mention are preserved.\n- Each call handles ONE issue. If you have unrelated items, make separate calls.\n\nReturns: A short confirmation with the issue ID (wi_xxxx) and any notable field changes.\n\nLimitations: Cannot delete issues. Priority 5 (negligible) issues are auto-rejected.",
       {
         message: z
           .string()
@@ -28,7 +28,7 @@ const handler = createMcpHandler(
 
     server.tool(
       'track0_ask',
-      'Ask a natural language question about tracked issues and get an AI-generated answer grounded in actual issue data. Searches for relevant issues, retrieves details as needed, and synthesizes an answer referencing specific issue IDs. Use this for analysis, summaries, prioritization advice, or questions like "what should I work on next?" or "what bugs are open?". Only references issues that actually exist in the tracker.',
+      'Ask a natural language question about tracked issues and get an answer grounded in actual issue data. Searches semantically across all issues, retrieves details as needed, and synthesizes an answer referencing specific issue IDs (wi_xxxx).\n\nGood for: status summaries, finding related issues, prioritization advice, filtering by type/status/priority/labels, "what should I work on next?", "what bugs are open?"\n\nReturns: A natural language answer citing specific issue IDs. Only references issues that actually exist in the tracker.\n\nLimitations: Read-only — cannot create or update issues.',
       {
         question: z
           .string()
@@ -44,7 +44,7 @@ const handler = createMcpHandler(
 
     server.tool(
       'track0_get',
-      'Retrieve the complete details and full conversation thread for a single issue by its ID. Returns the issue title, type, status, priority, labels, summary, timestamps, and the entire message thread. Use this when you need to understand the full context and history of a specific issue before updating it, or when the user asks for details about a particular issue.',
+      'Retrieve the complete details and full conversation thread for a single issue by its ID. Returns the issue title, type, status, priority, labels, summary, timestamps, and the entire message thread with all messages.\n\nUse this when you need the full context and history of a specific issue before updating it, or when the user asks for details about a particular issue.\n\nReturns "Issue not found: {id}" if the ID does not exist.',
       {
         id: z.string().describe('Issue ID to retrieve (e.g. wi_a3Kx)'),
       },
