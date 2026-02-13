@@ -7,12 +7,14 @@ export const STATUS_COLORS: Record<Issue['status'], string> = {
   active: 'text-[var(--green)]',
   open: 'text-[var(--yellow)]',
   done: 'text-muted-foreground',
+  archived: 'text-muted-foreground',
 };
 
 export const STATUS_BORDERS: Record<Issue['status'], string> = {
   active: 'border-[var(--green)]',
   open: 'border-[var(--yellow)]',
   done: 'border-border',
+  archived: 'border-border',
 };
 
 export const ROLE_COLORS: Record<ThreadMessage['role'], string> = {

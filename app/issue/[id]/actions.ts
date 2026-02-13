@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { updateIssueStatus } from '@/lib/db';
 import { handleTell } from '@/lib/tools';
 
-const VALID_STATUSES = new Set(['open', 'active', 'done']);
+const VALID_STATUSES = new Set(['open', 'active', 'done', 'archived']);
 
 export async function changeStatus(
   issueId: string,
@@ -15,6 +15,7 @@ export async function changeStatus(
   }
   await updateIssueStatus(issueId, status);
   revalidatePath(`/issue/${issueId}`);
+  revalidatePath('/');
 }
 
 export async function tellIssue(

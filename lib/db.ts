@@ -201,6 +201,7 @@ export async function getIssuesByStatus(): Promise<Issue[]> {
     SELECT id, title, type, status, priority, labels, summary, created_at, updated_at,
            (SELECT role FROM thread_messages WHERE issue_id = issues.id ORDER BY timestamp DESC LIMIT 1) AS last_message_by
     FROM issues
+    WHERE status != 'archived'
     ORDER BY
       CASE status
         WHEN 'active' THEN 0
@@ -217,7 +218,7 @@ export async function getNonDoneIssues(): Promise<Issue[]> {
     SELECT id, title, type, status, priority, labels, summary, created_at, updated_at,
            (SELECT role FROM thread_messages WHERE issue_id = issues.id ORDER BY timestamp DESC LIMIT 1) AS last_message_by
     FROM issues
-    WHERE status != 'done'
+    WHERE status NOT IN ('done', 'archived')
     ORDER BY
       CASE status WHEN 'active' THEN 0 WHEN 'open' THEN 1 END,
       CASE WHEN status = 'open' THEN updated_at END DESC,

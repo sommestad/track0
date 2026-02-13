@@ -4,7 +4,7 @@ export interface Issue {
   id: string;
   title: string;
   type: 'bug' | 'feature' | 'task';
-  status: 'open' | 'active' | 'done';
+  status: 'open' | 'active' | 'done' | 'archived';
   priority: number;
   labels: string[];
   summary: string;
@@ -30,7 +30,7 @@ export interface ThreadStats {
 export const IssueFieldsSchema = z.object({
   title: z.string().describe('Short imperative title, under 120 chars'),
   type: z.enum(['bug', 'feature', 'task']),
-  status: z.enum(['open', 'active', 'done']),
+  status: z.enum(['open', 'active', 'done', 'archived']),
   priority: z.number().describe('1 (critical) to 5 (negligible)'),
   labels: z.array(z.string()).describe('3-8 relevant tags'),
   summary: z.string().describe('2-3 sentence summary of current state'),

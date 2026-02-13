@@ -88,8 +88,12 @@ export function ModeAwareIssueList({
     const nonEmpty = [...grouped]
       .sort(
         (a, b) =>
-          LLM_STATUS_ORDER.indexOf(a.status) -
-          LLM_STATUS_ORDER.indexOf(b.status),
+          LLM_STATUS_ORDER.indexOf(
+            a.status as (typeof LLM_STATUS_ORDER)[number],
+          ) -
+          LLM_STATUS_ORDER.indexOf(
+            b.status as (typeof LLM_STATUS_ORDER)[number],
+          ),
       )
       .filter((g) => g.issues.length > 0 && g.status !== 'done');
     return (

@@ -25,29 +25,41 @@ export function StatusSelector({
     startTransition(() => changeStatus(issueId, value));
   }
 
+  const isArchived = currentStatus === 'archived';
+
   return (
-    <Tabs
-      value={currentStatus}
-      onValueChange={handleChange}
+    <div
       className={cn(
-        'gap-0 flex-row h-7',
+        'flex items-center gap-1.5',
         isPending && 'opacity-50 pointer-events-none',
       )}
     >
-      <TabsList className="[&]:h-auto gap-0 rounded-md p-1">
-        {STATUSES.map((status) => (
-          <TabsTrigger
-            key={status}
-            value={status}
-            className={cn(
-              'h-5 px-1.5 py-0 text-[0.625rem] rounded-sm uppercase',
-              status === currentStatus && STATUS_COLORS[status],
-            )}
-          >
-            {status}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+      <Tabs
+        value={isArchived ? '' : currentStatus}
+        onValueChange={handleChange}
+        className="gap-0 flex-row h-7"
+      >
+        <TabsList className="[&]:h-auto gap-0 rounded-md p-1">
+          {STATUSES.map((status) => (
+            <TabsTrigger
+              key={status}
+              value={status}
+              className={cn(
+                'h-5 px-1.5 py-0 text-[0.625rem] rounded-sm uppercase',
+                status === currentStatus && STATUS_COLORS[status],
+              )}
+            >
+              {status}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <button
+        onClick={() => handleChange(isArchived ? 'open' : 'archived')}
+        className="h-5 px-1.5 text-[0.625rem] rounded-sm uppercase text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      >
+        {isArchived ? 'unarchive' : 'archive'}
+      </button>
+    </div>
   );
 }
