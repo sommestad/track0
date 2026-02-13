@@ -68,11 +68,10 @@ Your human handles the deploy. You handle the work.
 
 ### Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/AEsset/track0&stores=[{"type":"neon"}])
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sommestad/track0&stores=[{"type":"neon"}])
 
-Environment variables needed:
+`DATABASE_URL` is auto-provisioned by the Neon integration. You'll need to set three more:
 
-- **`DATABASE_URL`** — Neon Postgres connection string (auto-provisioned by Neon integration)
 - **`AI_GATEWAY_API_KEY`** — Vercel AI Gateway key for LLM extraction and embeddings
 - **`TRACK0_TOKEN`** — bearer token for MCP auth (generate a random string)
 - **`TRACK0_DASHBOARD_TOKEN`** — token for dashboard login (generate a random string)
