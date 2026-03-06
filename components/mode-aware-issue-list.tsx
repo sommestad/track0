@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
-import { useState, useSyncExternalStore } from 'react';
+import {
+  useState,
+  useSyncExternalStore,
+  useOptimistic,
+  useTransition,
+  useRef,
+} from 'react';
+import { changeStatus } from '@/app/issue/[id]/actions';
+import { cn } from '@/lib/utils';
 import { IssueCard } from '@/components/issue-card';
 import {
   STATUS_COLORS,
@@ -29,6 +37,12 @@ interface ModeAwareIssueListProps {
   grouped: GroupedIssues[];
   thread_stats: Map<string, ThreadStats>;
 }
+
+type MoveAction = {
+  issueId: string;
+  fromStatus: Issue['status'];
+  toStatus: Issue['status'];
+};
 
 function LlmIssueLine({
   issue,
@@ -82,6 +96,40 @@ export function ModeAwareIssueList({
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  const [optimisticGrouped, moveIssue] = useOptimistic(
+    grouped,
+    (current, { issueId, fromStatus, toStatus }: MoveAction) =>
+      current.map((group) => {
+        if (group.status === fromStatus)
+          return {
+            ...group,
+            issues: group.issues.filter((i) => i.id !== issueId),
+          };
+        if (group.status === toStatus) {
+          const moved = current
+            .find((g) => g.status === fromStatus)
+            ?.issues.find((i) => i.id === issueId);
+          return moved
+            ? {
+                ...group,
+                issues: [{ ...moved, status: toStatus }, ...group.issues],
+              }
+            : group;
+        }
+        return group;
+      }),
+  );
+
+  const [, startTransition] = useTransition();
+  const dragRef = useRef<{
+    issueId: string;
+    fromStatus: Issue['status'];
+  } | null>(null);
+  const didDragRef = useRef(false);
+  const [dragOverLane, setDragOverLane] = useState<Issue['status'] | null>(
+    null,
+  );
+
   const isLlm = !mounted || theme === 'llm';
 
   if (isLlm) {
@@ -122,21 +170,53 @@ export function ModeAwareIssueList({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-      {grouped.map(({ status, issues }) => {
+      {optimisticGrouped.map(({ status, issues }) => {
         const isExpanded = expanded.has(status);
         const visible = isExpanded ? issues : issues.slice(0, LANE_LIMIT);
         const remaining = issues.length - LANE_LIMIT;
+        const laneStatus = status as Issue['status'];
 
         return (
           <section
             key={status}
-            className="bg-muted/30 rounded-lg p-3 min-h-[120px]"
+            className={cn(
+              'bg-muted/30 rounded-lg p-3 min-h-[120px] transition-colors',
+              dragOverLane === laneStatus &&
+                'ring-2 ring-primary/50 bg-muted/50',
+            )}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dragOverLane !== laneStatus) setDragOverLane(laneStatus);
+            }}
+            onDragLeave={(e) => {
+              if (
+                !e.currentTarget.contains(e.relatedTarget as Node)
+              ) {
+                setDragOverLane(null);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverLane(null);
+              const drag = dragRef.current;
+              if (!drag || drag.fromStatus === laneStatus) return;
+              const toStatus = laneStatus;
+              startTransition(async () => {
+                moveIssue({
+                  issueId: drag.issueId,
+                  fromStatus: drag.fromStatus,
+                  toStatus,
+                });
+                await changeStatus(drag.issueId, toStatus);
+              });
+            }}
           >
             <div
-              className={`border-l-2 pl-2 mb-3 ${STATUS_BORDERS[status as Issue['status']]}`}
+              className={`border-l-2 pl-2 mb-3 ${STATUS_BORDERS[laneStatus]}`}
             >
               <h2
-                className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[status as Issue['status']]}`}
+                className={`text-[0.625rem] font-medium uppercase tracking-wider ${STATUS_COLORS[laneStatus]}`}
               >
                 {status} ({issues.length})
               </h2>
@@ -146,7 +226,39 @@ export function ModeAwareIssueList({
             ) : (
               <div className="space-y-2.5">
                 {visible.map((issue) => (
-                  <IssueCard key={issue.id} issue={issue} />
+                  <div
+                    key={issue.id}
+                    draggable
+                    className="cursor-grab"
+                    onDragStart={(e) => {
+                      dragRef.current = {
+                        issueId: issue.id,
+                        fromStatus: laneStatus,
+                      };
+                      didDragRef.current = true;
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', issue.id);
+                      requestAnimationFrame(() => {
+                        (e.target as HTMLElement).style.opacity = '0.4';
+                      });
+                    }}
+                    onDragEnd={(e) => {
+                      (e.target as HTMLElement).style.opacity = '';
+                      dragRef.current = null;
+                      setDragOverLane(null);
+                      requestAnimationFrame(() => {
+                        didDragRef.current = false;
+                      });
+                    }}
+                    onClickCapture={(e) => {
+                      if (didDragRef.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
+                    <IssueCard issue={issue} />
+                  </div>
                 ))}
                 {remaining > 0 && (
                   <button
