@@ -190,9 +190,7 @@ export function ModeAwareIssueList({
               if (dragOverLane !== laneStatus) setDragOverLane(laneStatus);
             }}
             onDragLeave={(e) => {
-              if (
-                !e.currentTarget.contains(e.relatedTarget as Node)
-              ) {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                 setDragOverLane(null);
               }
             }}
