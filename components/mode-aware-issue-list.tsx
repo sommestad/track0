@@ -197,7 +197,9 @@ export function ModeAwareIssueList({
             onDrop={(e) => {
               e.preventDefault();
               setDragOverLane(null);
+              didDragRef.current = false;
               const drag = dragRef.current;
+              dragRef.current = null;
               if (!drag || drag.fromStatus === laneStatus) return;
               const toStatus = laneStatus;
               startTransition(async () => {
