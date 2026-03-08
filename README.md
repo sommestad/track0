@@ -110,7 +110,10 @@ When committing, pushing, or creating a PR for tracked work, update track0 with 
 
 ### Connect from Slack
 
-Your human can DM a Slack bot to create issues, ask questions, and look up issues — same capabilities as the MCP tools.
+Your human can interact with track0 from Slack in two ways:
+
+- **DM the bot** — same commands as the MCP tools, in a direct message
+- **@mention the bot in any channel or thread** — it reads the thread history for context
 
 #### 1. Create a Slack App
 
@@ -120,9 +123,17 @@ Your human can DM a Slack bot to create issues, ask questions, and look up issue
 #### 2. Configure bot permissions
 
 1. Go to **OAuth & Permissions** in the sidebar
-2. Under **Bot Token Scopes**, add:
-   - `chat:write` — send replies
-   - `im:history` — read DMs
+2. Under **Bot Token Scopes**, add these scopes:
+
+| Scope               | Purpose                                  |
+| ------------------- | ---------------------------------------- |
+| `chat:write`        | Send replies                             |
+| `im:history`        | Read DMs                                 |
+| `app_mentions:read` | Receive @mention events in channels      |
+| `channels:history`  | Read thread messages in public channels  |
+| `groups:history`    | Read thread messages in private channels |
+
+> `channels:history` and `groups:history` are needed so the bot can fetch thread context when @mentioned in a thread. If you only need DMs, you can skip them along with `app_mentions:read`.
 
 #### 3. Allow DMs
 
@@ -157,12 +168,21 @@ The endpoint must be live before Slack can verify it, which is why this step com
    ```
    You should see a green checkmark once Slack verifies the endpoint.
 3. Under **Subscribe to bot events**, click **Add Bot User Event** and add:
-   - `message.im`
+   - `message.im` — triggers on DMs to the bot
+   - `app_mention` — triggers when someone @mentions the bot in a channel
 4. Click **Save Changes**
 
-#### 7. DM the bot
+> If you already had the app installed before adding `app_mention` or the new scopes, go to **Install App** and click **Reinstall to Workspace** to pick up the new permissions.
 
-Open a DM with the bot in Slack. It responds in a thread. Give it 5-30 seconds — the agents need time to think.
+#### 7. Invite the bot to channels
+
+The bot can only see @mentions in channels it has been invited to.
+
+In any channel where you want to use it, type `/invite @track0` (or whatever you named the bot).
+
+#### 8. Use it
+
+**DM the bot** — same as before:
 
 | Message                        | Action                                               |
 | ------------------------------ | ---------------------------------------------------- |
@@ -170,6 +190,19 @@ Open a DM with the bot in Slack. It responds in a thread. Give it 5-30 seconds �
 | `get wi_a3Kx`                  | Get full details for an issue                        |
 | `tell wi_a3Kx: this is done`   | Update a specific issue                              |
 | `Add rate limiting to the API` | Create or match an issue (anything without a prefix) |
+
+**@mention in a channel or thread** — same commands, prefixed with the mention:
+
+| Message                                 | Action                                                 |
+| --------------------------------------- | ------------------------------------------------------ |
+| `@track0 ?what bugs are open`           | Ask a question                                         |
+| `@track0 get wi_a3Kx`                   | Get issue details                                      |
+| `@track0 the auth middleware is done`   | Create/update an issue                                 |
+| `@track0 ?what should we do about this` | Ask a question — thread history is included as context |
+
+When @mentioned inside a thread, the bot reads up to 20 previous messages in that thread and includes them as context. This means it can answer questions about or create issues from an ongoing conversation without you having to repeat the context.
+
+Give it 5-30 seconds to respond — the agents need time to think.
 
 For more details on Slack app setup, see the [Slack Events API docs](https://api.slack.com/apis/events-api).
 

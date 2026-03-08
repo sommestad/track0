@@ -61,6 +61,57 @@ export function formatForSlack(text: string, base_url?: string): string {
   return result;
 }
 
+export function stripBotMention(text: string): string {
+  return text.replace(/^<@U[A-Z0-9]+>\s*/, '');
+}
+
+export interface SlackThreadMessage {
+  user?: string;
+  bot_id?: string;
+  text: string;
+  ts: string;
+}
+
+export async function fetchThreadMessages(
+  bot_token: string,
+  channel: string,
+  thread_ts: string,
+): Promise<SlackThreadMessage[]> {
+  const url = new URL('https://slack.com/api/conversations.replies');
+  url.searchParams.set('channel', channel);
+  url.searchParams.set('ts', thread_ts);
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${bot_token}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Slack API HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!data.ok) {
+    throw new Error(`Slack API error: ${data.error}`);
+  }
+
+  return data.messages as SlackThreadMessage[];
+}
+
+export function formatThreadContext(
+  messages: SlackThreadMessage[],
+  trigger_ts: string,
+): string {
+  const filtered = messages
+    .filter((m) => m.ts !== trigger_ts && !m.bot_id)
+    .slice(-20);
+
+  if (filtered.length === 0) return '';
+
+  const lines = filtered.map((m) => `${m.user ?? 'unknown'}: ${m.text}`);
+  return `[Thread context]\n${lines.join('\n')}`;
+}
+
 export async function postSlackMessage(
   bot_token: string,
   channel: string,
