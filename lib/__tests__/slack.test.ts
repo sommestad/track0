@@ -5,6 +5,10 @@ import {
   parseSlackMessage,
   postSlackMessage,
   formatForSlack,
+  stripBotMention,
+  fetchThreadMessages,
+  formatThreadContext,
+  type SlackThreadMessage,
 } from '../slack';
 
 function makeSignature(secret: string, timestamp: string, body: string) {
@@ -138,6 +142,152 @@ describe('verifySlackSignature', () => {
     expect(verifySlackSignature(secret, old_timestamp, body, signature)).toBe(
       false,
     );
+  });
+});
+
+describe('stripBotMention', () => {
+  it('strips leading mention', () => {
+    expect(stripBotMention('<@U12345ABC> hello world')).toBe('hello world');
+  });
+
+  it('handles extra whitespace after mention', () => {
+    expect(stripBotMention('<@U12345ABC>   hello')).toBe('hello');
+  });
+
+  it('returns text unchanged when no mention', () => {
+    expect(stripBotMention('hello world')).toBe('hello world');
+  });
+
+  it('returns empty string for mention-only', () => {
+    expect(stripBotMention('<@U12345ABC>')).toBe('');
+  });
+
+  it('preserves mid-text mentions', () => {
+    expect(stripBotMention('<@U111> cc <@U222> please')).toBe(
+      'cc <@U222> please',
+    );
+  });
+
+  it('works with command prefixes', () => {
+    expect(stripBotMention('<@U12345ABC> ?what bugs are open')).toBe(
+      '?what bugs are open',
+    );
+    expect(stripBotMention('<@U12345ABC> get wi_abc')).toBe('get wi_abc');
+  });
+});
+
+describe('fetchThreadMessages', () => {
+  const mockFetch = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', mockFetch);
+  });
+
+  it('calls correct API endpoint', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ok: true,
+          messages: [{ text: 'hi', ts: '1.0' }],
+        }),
+    });
+
+    await fetchThreadMessages('xoxb-token', 'C123', '1234.5678');
+
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url.toString()).toBe(
+      'https://slack.com/api/conversations.replies?channel=C123&ts=1234.5678',
+    );
+    expect(opts.headers.Authorization).toBe('Bearer xoxb-token');
+  });
+
+  it('returns messages array', async () => {
+    const messages = [
+      { user: 'U1', text: 'hello', ts: '1.0' },
+      { user: 'U2', text: 'world', ts: '2.0' },
+    ];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: true, messages }),
+    });
+
+    const result = await fetchThreadMessages('xoxb-token', 'C123', '1.0');
+    expect(result).toEqual(messages);
+  });
+
+  it('throws on Slack API error', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: false, error: 'channel_not_found' }),
+    });
+
+    await expect(
+      fetchThreadMessages('xoxb-token', 'C999', '1.0'),
+    ).rejects.toThrow('Slack API error: channel_not_found');
+  });
+
+  it('throws on HTTP error', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500 });
+
+    await expect(
+      fetchThreadMessages('xoxb-token', 'C999', '1.0'),
+    ).rejects.toThrow('Slack API HTTP 500');
+  });
+});
+
+describe('formatThreadContext', () => {
+  it('formats messages with user and text', () => {
+    const messages: SlackThreadMessage[] = [
+      { user: 'U1', text: 'first message', ts: '1.0' },
+      { user: 'U2', text: 'second message', ts: '2.0' },
+    ];
+    expect(formatThreadContext(messages, '3.0')).toBe(
+      '[Thread context]\nU1: first message\nU2: second message',
+    );
+  });
+
+  it('excludes trigger message', () => {
+    const messages: SlackThreadMessage[] = [
+      { user: 'U1', text: 'context', ts: '1.0' },
+      { user: 'U2', text: 'trigger', ts: '2.0' },
+    ];
+    expect(formatThreadContext(messages, '2.0')).toBe(
+      '[Thread context]\nU1: context',
+    );
+  });
+
+  it('excludes bot messages', () => {
+    const messages: SlackThreadMessage[] = [
+      { user: 'U1', text: 'human', ts: '1.0' },
+      { bot_id: 'B1', text: 'bot reply', ts: '2.0' },
+    ];
+    expect(formatThreadContext(messages, '3.0')).toBe(
+      '[Thread context]\nU1: human',
+    );
+  });
+
+  it('returns empty string when no context remains', () => {
+    const messages: SlackThreadMessage[] = [
+      { user: 'U1', text: 'trigger', ts: '1.0' },
+    ];
+    expect(formatThreadContext(messages, '1.0')).toBe('');
+  });
+
+  it('caps at 20 messages', () => {
+    const messages: SlackThreadMessage[] = Array.from(
+      { length: 25 },
+      (_, i) => ({
+        user: 'U1',
+        text: `msg ${i}`,
+        ts: `${i}.0`,
+      }),
+    );
+    const result = formatThreadContext(messages, '99.0');
+    const lines = result.split('\n').slice(1); // skip header
+    expect(lines).toHaveLength(20);
+    expect(lines[0]).toBe('U1: msg 5'); // last 20 = indices 5-24
   });
 });
 

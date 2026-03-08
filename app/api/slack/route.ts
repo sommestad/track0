@@ -4,6 +4,9 @@ import {
   parseSlackMessage,
   postSlackMessage,
   formatForSlack,
+  stripBotMention,
+  fetchThreadMessages,
+  formatThreadContext,
 } from '@/lib/slack';
 import { handleTell, handleAsk, handleGet } from '@/lib/tools';
 
@@ -52,23 +55,41 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 200 });
   }
 
-  // Only handle DMs from real users
-  if (
-    event.type !== 'message' ||
-    event.channel_type !== 'im' ||
-    event.bot_id ||
-    event.subtype
-  ) {
+  const is_dm =
+    event.type === 'message' &&
+    event.channel_type === 'im' &&
+    !event.bot_id &&
+    !event.subtype;
+  const is_mention = event.type === 'app_mention' && !event.bot_id;
+
+  if (!is_dm && !is_mention) {
     return new NextResponse(null, { status: 200 });
   }
 
-  const text = String(event.text ?? '');
+  let text = String(event.text ?? '');
+  if (is_mention) text = stripBotMention(text);
+
   const channel = String(event.channel);
-  const thread_ts = String(event.ts);
+  const thread_ts = String(event.thread_ts ?? event.ts);
 
   after(async () => {
     try {
+      let thread_context = '';
+      if (is_mention && event.thread_ts) {
+        const messages = await fetchThreadMessages(
+          bot_token,
+          channel,
+          String(event.thread_ts),
+        );
+        thread_context = formatThreadContext(messages, String(event.ts));
+      }
+
       const parsed = parseSlackMessage(text);
+
+      if (thread_context && parsed.mode !== 'get') {
+        parsed.body = `${thread_context}\n\n${parsed.body}`;
+      }
+
       let result: string;
 
       switch (parsed.mode) {
