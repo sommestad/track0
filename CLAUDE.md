@@ -65,3 +65,5 @@ Three tools exposed via `mcp-handler`, authenticated with bearer token (`TRACK0_
 - `AI_GATEWAY_API_KEY` — Vercel AI Gateway key for LLM/embedding calls
 - `TRACK0_TOKEN` — Bearer token for MCP tool authentication
 - `TRACK0_DASHBOARD_TOKEN` — Token for dashboard login
+- `SLACK_BOT_TOKEN` / `SLACK_SIGNING_SECRET` — Slack integration (`app/api/slack/route.ts`)
+- `SLACK_ALLOWED_BOT_IDS` — Optional: `*` (all bots) or comma-separated Slack bot IDs (`B...`/`U...`) allowed to @mention track0; bots are ignored otherwise. track0's own bot user is always ignored

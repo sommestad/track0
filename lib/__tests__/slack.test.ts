@@ -8,6 +8,8 @@ import {
   stripBotMention,
   fetchThreadMessages,
   formatThreadContext,
+  parseAllowedBotIds,
+  isAllowedSender,
   type SlackThreadMessage,
 } from '../slack';
 
@@ -258,13 +260,51 @@ describe('formatThreadContext', () => {
     );
   });
 
-  it('excludes bot messages', () => {
+  it('excludes bot messages by default', () => {
     const messages: SlackThreadMessage[] = [
       { user: 'U1', text: 'human', ts: '1.0' },
       { bot_id: 'B1', text: 'bot reply', ts: '2.0' },
     ];
     expect(formatThreadContext(messages, '3.0')).toBe(
       '[Thread context]\nU1: human',
+    );
+  });
+
+  it('includes allowlisted bot messages, labelled by bot name', () => {
+    const messages: SlackThreadMessage[] = [
+      { user: 'U1', text: 'human', ts: '1.0' },
+      {
+        bot_id: 'B1',
+        user: 'UB1',
+        bot_profile: { name: 'yesper' },
+        text: 'allowed bot',
+        ts: '2.0',
+      },
+      { bot_id: 'B2', user: 'UB2', text: 'other bot', ts: '3.0' },
+    ];
+    expect(formatThreadContext(messages, '9.0', new Set(['B1']))).toBe(
+      '[Thread context]\nU1: human\nyesper: allowed bot',
+    );
+  });
+
+  it('includes all bots with * but never the app itself', () => {
+    const messages: SlackThreadMessage[] = [
+      { user: 'U1', text: 'human', ts: '1.0' },
+      { bot_id: 'B1', user: 'UB1', text: 'some bot', ts: '2.0' },
+      { bot_id: 'B0', user: 'USELF', text: 'my own reply', ts: '3.0' },
+    ];
+    expect(formatThreadContext(messages, '9.0', new Set(['*']), 'USELF')).toBe(
+      '[Thread context]\nU1: human\nUB1: some bot',
+    );
+  });
+
+  it('falls back to user id then bot_id for allowlisted bots without a name', () => {
+    const messages: SlackThreadMessage[] = [
+      { bot_id: 'B1', user: 'UB1', text: 'with user', ts: '1.0' },
+      { bot_id: 'B2', text: 'no user', ts: '2.0' },
+    ];
+    expect(formatThreadContext(messages, '9.0', new Set(['B1', 'B2']))).toBe(
+      '[Thread context]\nUB1: with user\nB2: no user',
     );
   });
 
@@ -288,6 +328,61 @@ describe('formatThreadContext', () => {
     const lines = result.split('\n').slice(1); // skip header
     expect(lines).toHaveLength(20);
     expect(lines[0]).toBe('U1: msg 5'); // last 20 = indices 5-24
+  });
+});
+
+describe('parseAllowedBotIds', () => {
+  it('returns empty set for undefined or empty input', () => {
+    expect(parseAllowedBotIds(undefined).size).toBe(0);
+    expect(parseAllowedBotIds('').size).toBe(0);
+  });
+
+  it('splits on commas and trims whitespace', () => {
+    const ids = parseAllowedBotIds(' B1, UB2 ,,B3 ');
+    expect([...ids]).toEqual(['B1', 'UB2', 'B3']);
+  });
+});
+
+describe('isAllowedSender', () => {
+  const allowed = new Set(['B1', 'UB2']);
+
+  it('always allows humans', () => {
+    expect(isAllowedSender({ user: 'U1' }, allowed)).toBe(true);
+    expect(isAllowedSender({ user: 'U1' }, new Set())).toBe(true);
+  });
+
+  it('rejects bots when allowlist is empty', () => {
+    expect(isAllowedSender({ bot_id: 'B1', user: 'UB1' }, new Set())).toBe(
+      false,
+    );
+  });
+
+  it('allows bots by bot_id', () => {
+    expect(isAllowedSender({ bot_id: 'B1', user: 'UB1' }, allowed)).toBe(true);
+  });
+
+  it('allows bots by bot user id', () => {
+    expect(isAllowedSender({ bot_id: 'B9', user: 'UB2' }, allowed)).toBe(true);
+  });
+
+  it('rejects bots not in the allowlist', () => {
+    expect(isAllowedSender({ bot_id: 'B9', user: 'UB9' }, allowed)).toBe(false);
+  });
+
+  it('allows any bot when allowlist contains *', () => {
+    const all = parseAllowedBotIds('*');
+    expect(isAllowedSender({ bot_id: 'B9', user: 'UB9' }, all)).toBe(true);
+    expect(isAllowedSender({ bot_id: 'B9' }, all)).toBe(true);
+  });
+
+  it('never allows the app itself, even with *', () => {
+    const all = parseAllowedBotIds('*');
+    expect(isAllowedSender({ bot_id: 'B0', user: 'USELF' }, all, 'USELF')).toBe(
+      false,
+    );
+    expect(isAllowedSender({ bot_id: 'B9', user: 'UB9' }, all, 'USELF')).toBe(
+      true,
+    );
   });
 });
 
