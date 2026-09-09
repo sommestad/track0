@@ -7,6 +7,8 @@ import {
   stripBotMention,
   fetchThreadMessages,
   formatThreadContext,
+  parseAllowedBotIds,
+  isAllowedSender,
 } from '@/lib/slack';
 import { handleTell, handleAsk, handleGet } from '@/lib/tools';
 
@@ -55,14 +57,36 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 200 });
   }
 
+  const allowed_bot_ids = parseAllowedBotIds(process.env.SLACK_ALLOWED_BOT_IDS);
+  const sender = {
+    user: event.user ? String(event.user) : undefined,
+    bot_id: event.bot_id ? String(event.bot_id) : undefined,
+  };
+  // Slack includes the app's own bot user ID in `authorizations`; used to make
+  // sure track0 never reacts to its own messages.
+  const authorizations = payload.authorizations as
+    | Array<{ user_id?: string }>
+    | undefined;
+  const self_user_id = authorizations?.[0]?.user_id;
+
+  // DMs are human-only. @mentions from bots are accepted only when the bot is
+  // allowlisted via SLACK_ALLOWED_BOT_IDS (or it is `*`), to avoid bot-to-bot
+  // reply loops.
   const is_dm =
     event.type === 'message' &&
     event.channel_type === 'im' &&
     !event.bot_id &&
     !event.subtype;
-  const is_mention = event.type === 'app_mention' && !event.bot_id;
+  const is_mention =
+    event.type === 'app_mention' &&
+    isAllowedSender(sender, allowed_bot_ids, self_user_id);
 
   if (!is_dm && !is_mention) {
+    if (event.type === 'app_mention' && event.bot_id) {
+      console.log(
+        `Slack: ignored @mention from bot (bot_id=${sender.bot_id}, user=${sender.user})`,
+      );
+    }
     return new NextResponse(null, { status: 200 });
   }
 
@@ -81,7 +105,12 @@ export async function POST(request: Request) {
           channel,
           String(event.thread_ts),
         );
-        thread_context = formatThreadContext(messages, String(event.ts));
+        thread_context = formatThreadContext(
+          messages,
+          String(event.ts),
+          allowed_bot_ids,
+          self_user_id,
+        );
       }
 
       const parsed = parseSlackMessage(text);

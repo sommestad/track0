@@ -65,9 +65,52 @@ export function stripBotMention(text: string): string {
   return text.replace(/^<@U[A-Z0-9]+>\s*/, '');
 }
 
+export const ALL_BOTS = '*';
+
+/**
+ * Parse a comma-separated list of Slack bot IDs (`B...`) and/or bot user IDs
+ * (`U...`) into a set. `*` allows every bot. Whitespace and empty entries are
+ * ignored.
+ */
+export function parseAllowedBotIds(raw: string | undefined): Set<string> {
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
+}
+
+export interface SlackSender {
+  user?: string;
+  bot_id?: string;
+}
+
+/**
+ * Whether a message sender should be processed. Humans are always allowed.
+ * Bots are allowed when the allowlist contains `*` or their `bot_id` / bot
+ * `user` ID. The app's own bot user (`self_user_id`) is never allowed, so it
+ * can't trigger itself even with `*`.
+ */
+export function isAllowedSender(
+  sender: SlackSender,
+  allowed_bot_ids: Set<string>,
+  self_user_id?: string,
+): boolean {
+  if (self_user_id && sender.user === self_user_id) return false;
+  if (!sender.bot_id) return true;
+  return (
+    allowed_bot_ids.has(ALL_BOTS) ||
+    allowed_bot_ids.has(sender.bot_id) ||
+    (!!sender.user && allowed_bot_ids.has(sender.user))
+  );
+}
+
 export interface SlackThreadMessage {
   user?: string;
   bot_id?: string;
+  bot_profile?: { name?: string };
   text: string;
   ts: string;
 }
@@ -101,14 +144,25 @@ export async function fetchThreadMessages(
 export function formatThreadContext(
   messages: SlackThreadMessage[],
   trigger_ts: string,
+  allowed_bot_ids: Set<string> = new Set(),
+  self_user_id?: string,
 ): string {
   const filtered = messages
-    .filter((m) => m.ts !== trigger_ts && !m.bot_id)
+    .filter(
+      (m) =>
+        m.ts !== trigger_ts &&
+        isAllowedSender(m, allowed_bot_ids, self_user_id),
+    )
     .slice(-20);
 
   if (filtered.length === 0) return '';
 
-  const lines = filtered.map((m) => `${m.user ?? 'unknown'}: ${m.text}`);
+  const lines = filtered.map((m) => {
+    const name = m.bot_id
+      ? (m.bot_profile?.name ?? m.user ?? m.bot_id)
+      : (m.user ?? 'unknown');
+    return `${name}: ${m.text}`;
+  });
   return `[Thread context]\n${lines.join('\n')}`;
 }
 
