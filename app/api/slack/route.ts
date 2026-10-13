@@ -9,6 +9,7 @@ import {
   formatThreadContext,
   parseAllowedBotIds,
   isAllowedSender,
+  isAllowedDm,
 } from '@/lib/slack';
 import { handleTell, handleAsk, handleGet } from '@/lib/tools';
 
@@ -69,22 +70,32 @@ export async function POST(request: Request) {
     | undefined;
   const self_user_id = authorizations?.[0]?.user_id;
 
-  // DMs are human-only. @mentions from bots are accepted only when the bot is
-  // allowlisted via SLACK_ALLOWED_BOT_IDS (or it is `*`), to avoid bot-to-bot
-  // reply loops.
+  // DMs and @mentions from bots are accepted only when the bot is allowlisted
+  // via SLACK_ALLOWED_BOT_IDS (or it is `*`). In DMs, bots can only start
+  // top-level messages, to avoid bot-to-bot reply loops (see isAllowedDm).
   const is_dm =
     event.type === 'message' &&
     event.channel_type === 'im' &&
-    !event.bot_id &&
-    !event.subtype;
+    isAllowedDm(
+      {
+        ...sender,
+        subtype: event.subtype ? String(event.subtype) : undefined,
+        ts: String(event.ts),
+        thread_ts: event.thread_ts ? String(event.thread_ts) : undefined,
+      },
+      allowed_bot_ids,
+      self_user_id,
+    );
   const is_mention =
     event.type === 'app_mention' &&
     isAllowedSender(sender, allowed_bot_ids, self_user_id);
 
   if (!is_dm && !is_mention) {
-    if (event.type === 'app_mention' && event.bot_id) {
+    // track0's own replies in DMs also arrive here; don't log those.
+    if (sender.bot_id && sender.user !== self_user_id) {
+      const source = event.type === 'app_mention' ? '@mention' : 'DM';
       console.log(
-        `Slack: ignored @mention from bot (bot_id=${sender.bot_id}, user=${sender.user})`,
+        `Slack: ignored ${source} from bot (bot_id=${sender.bot_id}, user=${sender.user})`,
       );
     }
     return new NextResponse(null, { status: 200 });

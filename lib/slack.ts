@@ -107,6 +107,33 @@ export function isAllowedSender(
   );
 }
 
+export interface SlackDmMessage extends SlackSender {
+  subtype?: string;
+  ts: string;
+  thread_ts?: string;
+}
+
+/**
+ * Whether a DM should be processed. Only plain messages count (plus
+ * `bot_message` from bots), so edits, deletions and the like are skipped.
+ * Senders must pass `isAllowedSender`. Bots can only start top-level
+ * messages: track0 answers in a thread, so if bots could reply there, a bot
+ * that answers every message would ping-pong with track0 forever.
+ */
+export function isAllowedDm(
+  message: SlackDmMessage,
+  allowed_bot_ids: Set<string>,
+  self_user_id?: string,
+): boolean {
+  const is_plain =
+    !message.subtype || (message.subtype === 'bot_message' && !!message.bot_id);
+  if (!is_plain) return false;
+  if (!isAllowedSender(message, allowed_bot_ids, self_user_id)) return false;
+  const is_thread_reply =
+    !!message.thread_ts && message.thread_ts !== message.ts;
+  return !message.bot_id || !is_thread_reply;
+}
+
 export interface SlackThreadMessage {
   user?: string;
   bot_id?: string;

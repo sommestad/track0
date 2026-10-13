@@ -10,6 +10,7 @@ import {
   formatThreadContext,
   parseAllowedBotIds,
   isAllowedSender,
+  isAllowedDm,
   type SlackThreadMessage,
 } from '../slack';
 
@@ -383,6 +384,50 @@ describe('isAllowedSender', () => {
     expect(isAllowedSender({ bot_id: 'B9', user: 'UB9' }, all, 'USELF')).toBe(
       true,
     );
+  });
+});
+
+describe('isAllowedDm', () => {
+  const allowed = new Set(['B1']);
+  const all = parseAllowedBotIds('*');
+  const bot = { bot_id: 'B1', user: 'UB1', ts: '1.0' };
+
+  it('allows humans, including thread replies', () => {
+    expect(isAllowedDm({ user: 'U1', ts: '1.0' }, new Set())).toBe(true);
+    expect(
+      isAllowedDm({ user: 'U1', ts: '2.0', thread_ts: '1.0' }, new Set()),
+    ).toBe(true);
+  });
+
+  it('skips edits, deletions and other subtypes', () => {
+    expect(
+      isAllowedDm({ user: 'U1', ts: '1.0', subtype: 'message_changed' }, all),
+    ).toBe(false);
+    expect(isAllowedDm({ ts: '1.0', subtype: 'message_deleted' }, all)).toBe(
+      false,
+    );
+    expect(isAllowedDm({ ts: '1.0', subtype: 'bot_message' }, all)).toBe(false);
+  });
+
+  it('rejects bots not in the allowlist', () => {
+    expect(isAllowedDm(bot, new Set())).toBe(false);
+  });
+
+  it('allows top-level messages from allowlisted bots', () => {
+    expect(isAllowedDm(bot, allowed)).toBe(true);
+    expect(isAllowedDm({ ...bot, subtype: 'bot_message' }, allowed)).toBe(true);
+    expect(isAllowedDm({ ...bot, thread_ts: '1.0' }, allowed)).toBe(true);
+  });
+
+  it('ignores bot replies in threads, even with *', () => {
+    const reply = { ...bot, ts: '2.0', thread_ts: '1.0' };
+    expect(isAllowedDm(reply, allowed)).toBe(false);
+    expect(isAllowedDm(reply, all)).toBe(false);
+  });
+
+  it('never allows the app itself, even with *', () => {
+    const self = { bot_id: 'B0', user: 'USELF', ts: '1.0' };
+    expect(isAllowedDm(self, all, 'USELF')).toBe(false);
   });
 });
 

@@ -149,12 +149,12 @@ Your human can interact with track0 from Slack in two ways:
 
 Add these to the Vercel project (Settings > Environment Variables):
 
-| Variable                | Where to find it                                                                                                                                                                                           |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SLACK_BOT_TOKEN`       | **OAuth & Permissions** > **Bot User OAuth Token** (starts with `xoxb-`)                                                                                                                                   |
-| `SLACK_SIGNING_SECRET`  | **Basic Information** > **App Credentials** > **Signing Secret**                                                                                                                                           |
-| `TRACK0_BASE_URL`       | Your dashboard URL, e.g. `https://your-track0.vercel.app` (optional — enables clickable issue links in Slack replies)                                                                                      |
-| `SLACK_ALLOWED_BOT_IDS` | `*` to respond to @mentions from any bot, or a comma-separated list of bot IDs (`B...`) / bot user IDs (`U...`) (optional — see [Letting other bots talk to track0](#9-letting-other-bots-talk-to-track0)) |
+| Variable                | Where to find it                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SLACK_BOT_TOKEN`       | **OAuth & Permissions** > **Bot User OAuth Token** (starts with `xoxb-`)                                                                                                                                           |
+| `SLACK_SIGNING_SECRET`  | **Basic Information** > **App Credentials** > **Signing Secret**                                                                                                                                                   |
+| `TRACK0_BASE_URL`       | Your dashboard URL, e.g. `https://your-track0.vercel.app` (optional — enables clickable issue links in Slack replies)                                                                                              |
+| `SLACK_ALLOWED_BOT_IDS` | `*` to respond to @mentions and DMs from any bot, or a comma-separated list of bot IDs (`B...`) / bot user IDs (`U...`) (optional — see [Letting other bots talk to track0](#9-letting-other-bots-talk-to-track0)) |
 
 Redeploy after setting the variables.
 
@@ -207,14 +207,14 @@ Give it 5-30 seconds to respond — the agents need time to think.
 
 #### 9. Letting other bots talk to track0
 
-By default track0 ignores messages from other bots. To let other agents @mention track0, set `SLACK_ALLOWED_BOT_IDS` and redeploy:
+By default track0 ignores messages from other bots. To let other agents @mention or DM track0, set `SLACK_ALLOWED_BOT_IDS` and redeploy:
 
-- **`*`** — respond to @mentions from any bot in the workspace. Simplest option.
-- **A comma-separated list of IDs** — only those bots. Use bot IDs (`B...`) or bot user IDs (`U...`), both work. To find a bot's ID, either @mention track0 from it once and check the Vercel function logs (track0 logs `Slack: ignored @mention from bot (bot_id=B..., user=U...)`), or open the bot's Slack profile, click **⋮** and **Copy member ID**.
+- **`*`** — respond to any bot in the workspace. Simplest option.
+- **A comma-separated list of IDs** — only those bots. Use bot IDs (`B...`) or bot user IDs (`U...`), both work. To find a bot's ID, either @mention or DM track0 from it once and check the Vercel function logs (track0 logs `Slack: ignored @mention from bot (bot_id=B..., user=U...)`, or `ignored DM from bot` for DMs), or open the bot's Slack profile, click **⋮** and **Copy member ID**.
 
-Allowed bots use the same commands as humans, but only via @mention — DMs are always human-only. Their messages are also included as thread context (labelled with the bot's name) when track0 is @mentioned in a thread.
+Allowed bots use the same commands as humans, via @mention or DM. In DMs, a bot can only start new top-level messages: track0 answers in a thread and ignores bot replies in that thread. Bot messages are also included as thread context (labelled with the bot's name) when track0 is @mentioned in a thread.
 
-**Loop safety:** track0 only reacts to @mentions and never @mentions anyone in its replies, and it always ignores messages from its own bot user. A loop can still happen if another bot is set up to reply to track0's replies by @mentioning it again — if you run LLM-driven bots that react to every message in a thread, prefer the explicit ID list over `*`.
+**Loop safety:** track0 never @mentions anyone in its replies, ignores bot replies in its DM threads, and always ignores messages from its own bot user. A loop can still happen if another bot is set up to answer track0's replies by @mentioning it again or with a new top-level DM — if you run LLM-driven bots that react to every message, prefer the explicit ID list over `*`.
 
 For more details on Slack app setup, see the [Slack Events API docs](https://api.slack.com/apis/events-api).
 
