@@ -221,6 +221,6 @@ For more details on Slack app setup, see the [Slack Events API docs](https://api
 ## Stack
 
 - Next.js (App Router)
-- Vercel AI SDK + Claude Sonnet 4.5
+- Vercel AI SDK + Claude Sonnet 5.5
 - Neon Postgres + pgvector
 - mcp-handler

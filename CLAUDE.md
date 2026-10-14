@@ -23,7 +23,7 @@ track0 is an AI-native issue tracker where issues are conversation threads, not 
 
 Three tools exposed via `mcp-handler`, authenticated with bearer token (`TRACK0_TOKEN`):
 
-- **`track0_tell`** → `lib/tell-agent.ts`: Agentic orchestrator (Claude Sonnet 4.5, max 5 steps) that classifies messages as "new work" vs "directive", searches for duplicates via vector similarity, and creates or updates issues. Duplicate threshold: ≥85% similarity + same unit of work. P5 issues are auto-rejected.
+- **`track0_tell`** → `lib/tell-agent.ts`: Agentic orchestrator (Claude Sonnet 5.5, max 5 steps) that classifies messages as "new work" vs "directive", searches for duplicates via vector similarity, and creates or updates issues. Duplicate threshold: ≥85% similarity + same unit of work. P5 issues are auto-rejected.
 - **`track0_ask`** → `lib/ask-agent.ts`: Agentic Q&A over tracked issues. Routes to semantic search, active issue listing, or detail retrieval.
 - **`track0_get`** → `lib/tools.ts`: Direct issue lookup by ID with full thread.
 

@@ -50,7 +50,7 @@ export async function runAskAgent(question: string): Promise<string> {
   await ensureSchema();
 
   const result = await generateText({
-    model: gateway('anthropic/claude-sonnet-4.5'),
+    model: gateway('anthropic/claude-sonnet-5.5'),
     system: ASK_SYSTEM_PROMPT,
     prompt: question,
     tools: {
