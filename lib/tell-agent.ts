@@ -116,7 +116,7 @@ export async function runTellAgent(
   let affectedIssueId: string | undefined;
 
   const result = await generateText({
-    model: gateway('anthropic/claude-sonnet-4.5'),
+    model: gateway('anthropic/claude-sonnet-5.5'),
     system: TELL_SYSTEM_PROMPT,
     prompt: user_prompt,
     tools: {

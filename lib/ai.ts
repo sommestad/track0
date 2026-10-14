@@ -64,7 +64,7 @@ export async function extractFields(
   const thread_context = formatThreadForExtraction(messages);
   try {
     const result = await generateText({
-      model: gateway('anthropic/claude-sonnet-4.5'),
+      model: gateway('anthropic/claude-sonnet-5.5'),
       prompt: `${EXTRACTION_PROMPT}
 ${current_summary ? `\n<current_summary>\n${current_summary}\n</current_summary>` : ''}
 <thread>
