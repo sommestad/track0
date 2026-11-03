@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Archive } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
   useState,
@@ -130,6 +131,12 @@ export function ModeAwareIssueList({
     null,
   );
 
+  const move = (action: MoveAction): void =>
+    startTransition(async () => {
+      moveIssue(action);
+      await changeStatus(action.issueId, action.toStatus);
+    });
+
   const isLlm = !mounted || theme === 'llm';
 
   if (isLlm) {
@@ -167,6 +174,16 @@ export function ModeAwareIssueList({
   }
 
   const LANE_LIMIT = 5;
+  const visibleCount = (g: GroupedIssues): number =>
+    expanded.has(g.status)
+      ? g.issues.length
+      : Math.min(g.issues.length, LANE_LIMIT);
+  // The longest lane drives page scroll; the others stick to the top so cards
+  // far down the page can still be dropped on them. Sticky lanes are capped at
+  // viewport height and scroll internally so none of their cards get hidden.
+  const longestStatus = optimisticGrouped.reduce((a, b) =>
+    visibleCount(b) > visibleCount(a) ? b : a,
+  ).status;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
@@ -181,6 +198,8 @@ export function ModeAwareIssueList({
             key={status}
             className={cn(
               'bg-muted/30 rounded-lg p-3 min-h-[120px] transition-colors',
+              status !== longestStatus &&
+                'md:sticky md:top-4 md:max-h-[calc(100dvh-2rem)] md:overflow-y-auto',
               dragOverLane === laneStatus &&
                 'ring-2 ring-primary/50 bg-muted/50',
             )}
@@ -201,14 +220,10 @@ export function ModeAwareIssueList({
               const drag = dragRef.current;
               dragRef.current = null;
               if (!drag || drag.fromStatus === laneStatus) return;
-              const toStatus = laneStatus;
-              startTransition(async () => {
-                moveIssue({
-                  issueId: drag.issueId,
-                  fromStatus: drag.fromStatus,
-                  toStatus,
-                });
-                await changeStatus(drag.issueId, toStatus);
+              move({
+                issueId: drag.issueId,
+                fromStatus: drag.fromStatus,
+                toStatus: laneStatus,
               });
             }}
           >
@@ -229,7 +244,7 @@ export function ModeAwareIssueList({
                   <div
                     key={issue.id}
                     draggable
-                    className="cursor-grab"
+                    className="group relative cursor-grab"
                     onDragStart={(e) => {
                       dragRef.current = {
                         issueId: issue.id,
@@ -258,6 +273,21 @@ export function ModeAwareIssueList({
                     }}
                   >
                     <IssueCard issue={issue} />
+                    <button
+                      type="button"
+                      aria-label="Archive"
+                      title="Archive"
+                      onClick={() =>
+                        move({
+                          issueId: issue.id,
+                          fromStatus: laneStatus,
+                          toStatus: 'archived',
+                        })
+                      }
+                      className="absolute bottom-2 right-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 cursor-pointer"
+                    >
+                      <Archive className="size-3.5" />
+                    </button>
                   </div>
                 ))}
                 {remaining > 0 && (
