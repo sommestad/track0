@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Archive } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
   useState,
@@ -130,6 +131,12 @@ export function ModeAwareIssueList({
     null,
   );
 
+  const move = (action: MoveAction): void =>
+    startTransition(async () => {
+      moveIssue(action);
+      await changeStatus(action.issueId, action.toStatus);
+    });
+
   const isLlm = !mounted || theme === 'llm';
 
   if (isLlm) {
@@ -213,14 +220,10 @@ export function ModeAwareIssueList({
               const drag = dragRef.current;
               dragRef.current = null;
               if (!drag || drag.fromStatus === laneStatus) return;
-              const toStatus = laneStatus;
-              startTransition(async () => {
-                moveIssue({
-                  issueId: drag.issueId,
-                  fromStatus: drag.fromStatus,
-                  toStatus,
-                });
-                await changeStatus(drag.issueId, toStatus);
+              move({
+                issueId: drag.issueId,
+                fromStatus: drag.fromStatus,
+                toStatus: laneStatus,
               });
             }}
           >
@@ -241,7 +244,7 @@ export function ModeAwareIssueList({
                   <div
                     key={issue.id}
                     draggable
-                    className="cursor-grab"
+                    className="group relative cursor-grab"
                     onDragStart={(e) => {
                       dragRef.current = {
                         issueId: issue.id,
@@ -270,6 +273,21 @@ export function ModeAwareIssueList({
                     }}
                   >
                     <IssueCard issue={issue} />
+                    <button
+                      type="button"
+                      aria-label="Archive"
+                      title="Archive"
+                      onClick={() =>
+                        move({
+                          issueId: issue.id,
+                          fromStatus: laneStatus,
+                          toStatus: 'archived',
+                        })
+                      }
+                      className="absolute bottom-2 right-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 cursor-pointer"
+                    >
+                      <Archive className="size-3.5" />
+                    </button>
                   </div>
                 ))}
                 {remaining > 0 && (
