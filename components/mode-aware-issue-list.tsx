@@ -167,6 +167,16 @@ export function ModeAwareIssueList({
   }
 
   const LANE_LIMIT = 5;
+  const visibleCount = (g: GroupedIssues): number =>
+    expanded.has(g.status)
+      ? g.issues.length
+      : Math.min(g.issues.length, LANE_LIMIT);
+  // The longest lane drives page scroll; the others stick to the top so cards
+  // far down the page can still be dropped on them. Sticky lanes are capped at
+  // viewport height and scroll internally so none of their cards get hidden.
+  const longestStatus = optimisticGrouped.reduce((a, b) =>
+    visibleCount(b) > visibleCount(a) ? b : a,
+  ).status;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
@@ -181,6 +191,8 @@ export function ModeAwareIssueList({
             key={status}
             className={cn(
               'bg-muted/30 rounded-lg p-3 min-h-[120px] transition-colors',
+              status !== longestStatus &&
+                'md:sticky md:top-4 md:max-h-[calc(100dvh-2rem)] md:overflow-y-auto',
               dragOverLane === laneStatus &&
                 'ring-2 ring-primary/50 bg-muted/50',
             )}
