@@ -1,20 +1,28 @@
 import Link from 'next/link';
 import { PriorityIndicator } from '@/components/priority-indicator';
 import { timeAgo, ageOpacity } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
 
 interface IssueCardProps {
   issue: Issue;
+  selected?: boolean;
 }
 
-export function IssueCard({ issue }: IssueCardProps): React.ReactNode {
+export function IssueCard({
+  issue,
+  selected = false,
+}: IssueCardProps): React.ReactNode {
   const opacity = ageOpacity(issue.updated_at);
   const isRecent = opacity <= 0.4;
 
   return (
     <Link
       href={`/issue/${issue.id}`}
-      className="block rounded-md bg-white px-3 py-2.5 hover:bg-white/80 transition-colors"
+      className={cn(
+        'block rounded-md bg-white px-3 py-2.5 hover:bg-white/80 transition-colors',
+        selected && 'ring-2 ring-primary/60',
+      )}
     >
       <div className="flex items-center gap-2">
         <span className="text-sm">{issue.title}</span>
