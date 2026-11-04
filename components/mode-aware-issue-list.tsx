@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Archive } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
@@ -48,9 +49,11 @@ type MoveAction = {
 function LlmIssueLine({
   issue,
   stats,
+  selected,
 }: {
   issue: Issue;
   stats: ThreadStats | undefined;
+  selected: boolean;
 }): React.ReactNode {
   const updated = new Date(issue.updated_at).toISOString();
   const thread_info = stats
@@ -60,7 +63,10 @@ function LlmIssueLine({
   return (
     <Link
       href={`/issue/${issue.id}`}
-      className="block hover:bg-accent/50 px-1 -mx-1 py-1"
+      className={cn(
+        'block hover:bg-accent/50 px-1 -mx-1 py-1',
+        selected && 'bg-accent',
+      )}
     >
       <span className="text-muted-foreground">{issue.id}</span>
       <span className="text-muted-foreground"> | </span>
@@ -94,6 +100,11 @@ export function ModeAwareIssueList({
 }: ModeAwareIssueListProps): React.ReactNode {
   const { theme } = useTheme();
   const mounted = useMounted();
+  const pathname = usePathname();
+  // Set while the issue panel is open over the board.
+  const selectedId = pathname.startsWith('/issue/')
+    ? pathname.slice('/issue/'.length)
+    : null;
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -164,6 +175,7 @@ export function ModeAwareIssueList({
                   key={issue.id}
                   issue={issue}
                   stats={thread_stats.get(issue.id)}
+                  selected={issue.id === selectedId}
                 />
               ))}
             </div>
@@ -272,7 +284,10 @@ export function ModeAwareIssueList({
                       }
                     }}
                   >
-                    <IssueCard issue={issue} />
+                    <IssueCard
+                      issue={issue}
+                      selected={issue.id === selectedId}
+                    />
                     <button
                       type="button"
                       aria-label="Archive"

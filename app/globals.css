@@ -31,6 +31,7 @@
   --blue: #4e7aa0;
 
   --font-body: var(--font-inter), ui-sans-serif, sans-serif;
+  --issue-panel-width: min(38rem, 60vw);
   font-size: 110%;
 }
 
@@ -97,6 +98,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
+  transition: padding-right 200ms ease;
+}
+
+/* Wide screens make room for the issue panel so every lane stays clickable;
+   narrower ones let the panel cover the right side of the board. */
+@media (min-width: 80rem) {
+  body:has([data-issue-panel]) {
+    padding-right: var(--issue-panel-width);
+  }
 }
 
 .prose-thread {
